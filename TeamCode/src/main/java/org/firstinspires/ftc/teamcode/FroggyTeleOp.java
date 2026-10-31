@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 /*
  * TeleOp de Froggy (LamBot 23758): chasis mecanum field-centric, doble intake y shooter de 2 flywheels.
@@ -100,14 +99,9 @@ public class FroggyTeleOp extends LinearOpMode {
         shooterBack  = initFlywheel("shooterBack", SHOOTER_BACK_DIRECTION);
         shooterFront = initFlywheel("shooterFront", SHOOTER_FRONT_DIRECTION);
 
+        // Solo usamos el giroscopio interno del Pinpoint para el heading; los pods de odometría
+        // no se configuran todavía. Calibra el giroscopio, así que el robot debe estar quieto.
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
-        // TODO: medir la posición real de los pods respecto al centro del robot (solo importa para x/y,
-        // el field-centric usa únicamente el heading).
-        pinpoint.setOffsets(0, 0, DistanceUnit.MM);
-        // TODO: confirmar el tipo de pod (swingarm o 4-bar).
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
-        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
-                                      GoBildaPinpointDriver.EncoderDirection.FORWARD);
         pinpoint.resetPosAndIMU();
     }
 
