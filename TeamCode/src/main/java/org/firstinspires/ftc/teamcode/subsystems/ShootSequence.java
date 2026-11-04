@@ -15,9 +15,9 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
  */
 public class ShootSequence {
 
-    // Sin sensor de pelotas, la preparación dura un tiempo fijo. Valor inicial de cooperRobot.
-    // TODO: ajustar en el robot. Muy largo saca las pelotas del robot; muy corto no las aleja.
-    static final double PREPARE_TIME_SECONDS = 0.25;
+    // Sin sensor de pelotas, la preparación dura un tiempo fijo.
+    // Muy largo saca las pelotas del robot; muy corto no las aleja de los flywheels.
+    static final double PREPARE_TIME_SECONDS = 0.08;
 
     private enum State { IDLE, PREPARING, READY, SHOOTING }
 
