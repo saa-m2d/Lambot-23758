@@ -18,18 +18,21 @@ public class Intake {
     static final DcMotorSimple.Direction FRONT_DIRECTION = DcMotorSimple.Direction.FORWARD;
     static final DcMotorSimple.Direction BACK_DIRECTION  = DcMotorSimple.Direction.FORWARD;
 
-    static final double INTAKE_POWER = 1.0;
-    static final double FEED_POWER = 1.0;
-    static final double REVERSE_POWER = -1.0;
+    static final double INTAKE_POWER = 1.0;     // recoger del piso
+    static final double FEED_POWER = 1.0;       // empujar hacia el shooter
+    static final double REVERSE_POWER = -0.8;   // sacar pelotas
 
     private final DcMotor front, back;
-    private String state = "apagado";
+    private String state = "apagado";           // solo para la telemetría
 
     public Intake(HardwareMap hardwareMap) {
         front = hardwareMap.get(DcMotor.class, "intakeFront");
         back  = hardwareMap.get(DcMotor.class, "intakeBack");
         front.setDirection(FRONT_DIRECTION);
         back.setDirection(BACK_DIRECTION);
+        // Frenar para que las pelotas no avancen solas mientras los flywheels aceleran
+        front.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        back.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     /** Recoger pelotas del piso. */
@@ -42,11 +45,12 @@ public class Intake {
         setPower(FEED_POWER, "alimentando shooter");
     }
 
-    /** Sacar pelotas para desatorar. */
+    /** Sacar pelotas, para desatorar o alejarlas de los flywheels. */
     public void reverse() {
         setPower(REVERSE_POWER, "reversa");
     }
 
+    /** Apagar ambos intakes. */
     public void stop() {
         setPower(0, "apagado");
     }
@@ -56,6 +60,7 @@ public class Intake {
         setPower(0, "esperando shooter");
     }
 
+    // Ambos motores siempre trabajan juntos
     private void setPower(double power, String newState) {
         front.setPower(power);
         back.setPower(power);

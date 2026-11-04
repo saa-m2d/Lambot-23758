@@ -22,26 +22,30 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 public class Drivetrain {
 
     // TODO: verificar en el robot. Si un motor gira al revés, cambia su dirección aquí.
-    static final DcMotorSimple.Direction LEFT_DIRECTION  = DcMotorSimple.Direction.REVERSE;
-    static final DcMotorSimple.Direction RIGHT_DIRECTION = DcMotorSimple.Direction.FORWARD;
+    // Usa el OpMode "Drive Test" para revisarlos uno por uno.
+    static final DcMotorSimple.Direction FRONT_LEFT_DIRECTION  = DcMotorSimple.Direction.REVERSE;
+    static final DcMotorSimple.Direction BACK_LEFT_DIRECTION   = DcMotorSimple.Direction.REVERSE;
+    static final DcMotorSimple.Direction FRONT_RIGHT_DIRECTION = DcMotorSimple.Direction.FORWARD;
+    static final DcMotorSimple.Direction BACK_RIGHT_DIRECTION  = DcMotorSimple.Direction.FORWARD;
 
     static final double STRAFE_CORRECTION = 1.1;   // compensa que el mecanum avanza menos de lado
 
     private final DcMotor frontLeft, backLeft, frontRight, backRight;
     private final GoBildaPinpointDriver pinpoint;
-    private double headingOffset = 0;
+    private double headingOffset = 0;              // heading que hoy cuenta como "adelante"
 
     public Drivetrain(HardwareMap hardwareMap) {
-        frontLeft  = initMotor(hardwareMap, "frontLeft", LEFT_DIRECTION);
-        backLeft   = initMotor(hardwareMap, "backLeft", LEFT_DIRECTION);
-        frontRight = initMotor(hardwareMap, "frontRight", RIGHT_DIRECTION);
-        backRight  = initMotor(hardwareMap, "backRight", RIGHT_DIRECTION);
+        frontLeft  = initMotor(hardwareMap, "frontLeft", FRONT_LEFT_DIRECTION);
+        backLeft   = initMotor(hardwareMap, "backLeft", BACK_LEFT_DIRECTION);
+        frontRight = initMotor(hardwareMap, "frontRight", FRONT_RIGHT_DIRECTION);
+        backRight  = initMotor(hardwareMap, "backRight", BACK_RIGHT_DIRECTION);
 
         // Calibra el giroscopio, así que el robot debe estar quieto al inicializar.
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
         pinpoint.resetPosAndIMU();
     }
 
+    // Busca un motor y lo deja listo: frena al soltar el stick y recibe potencia directa
     private static DcMotor initMotor(HardwareMap hardwareMap, String name, DcMotorSimple.Direction direction) {
         DcMotor motor = hardwareMap.get(DcMotor.class, name);
         motor.setDirection(direction);
@@ -83,14 +87,24 @@ public class Drivetrain {
     /** Maneja relativo al robot. Mismos parámetros que driveFieldCentric. */
     public void driveRobotCentric(double forward, double strafe, double turn, double scale) {
         strafe *= STRAFE_CORRECTION;
+        // Si la suma pasa de 1, se reduce todo por igual para conservar la dirección del movimiento
         double denominator = Math.max(Math.abs(forward) + Math.abs(strafe) + Math.abs(turn), 1);
 
-        frontLeft.setPower((forward + strafe + turn) / denominator * scale);
-        backLeft.setPower((forward - strafe + turn) / denominator * scale);
-        frontRight.setPower((forward - strafe - turn) / denominator * scale);
-        backRight.setPower((forward + strafe - turn) / denominator * scale);
+        setMotorPowers((forward + strafe + turn) / denominator * scale,
+                       (forward - strafe + turn) / denominator * scale,
+                       (forward - strafe - turn) / denominator * scale,
+                       (forward + strafe - turn) / denominator * scale);
     }
 
+    /** Potencia directa a cada motor. Con potencia positiva, cada rueda debe empujar el robot hacia adelante. */
+    public void setMotorPowers(double frontLeftPower, double backLeftPower, double frontRightPower, double backRightPower) {
+        frontLeft.setPower(frontLeftPower);
+        backLeft.setPower(backLeftPower);
+        frontRight.setPower(frontRightPower);
+        backRight.setPower(backRightPower);
+    }
+
+    /** Detiene los 4 motores. */
     public void stop() {
         driveRobotCentric(0, 0, 0, 0);
     }
