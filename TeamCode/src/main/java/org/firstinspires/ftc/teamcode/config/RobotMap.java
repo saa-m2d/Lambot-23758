@@ -17,7 +17,8 @@ package org.firstinspires.ftc.teamcode.config;
  *     5: flowerLeft                1: turretRight
  *                                  2: flowerRight
  *
- *   Control Hub - analógico 0: turretEnc (4.º cable de turretLeft)
+ *   Control Hub - analógico 0 (conector 0-1, pin azul):   turretEncLeft  (4.º cable de turretLeft)
+ *   Expansion Hub - analógico 2 (conector 2-3, pin azul): turretEncRight (4.º cable de turretRight)
  *   Expansion Hub - I2C bus 0: pinpoint
  *   Control Hub - USB 3.0 (azul): limelight
  *
@@ -52,8 +53,9 @@ public final class RobotMap {
     public static final String PINPOINT  = "pinpoint";
     public static final String LIMELIGHT = "limelight";
 
-    /** 4.º cable de turretLeft (posición del servo dentro de una vuelta), tipo "Analog Input". */
-    public static final String TURRET_ENCODER = "turretEnc";
+    /** 4.º cable de cada servo de la torreta (posición dentro de una vuelta), tipo "Analog Input". */
+    public static final String TURRET_ENCODER_LEFT  = "turretEncLeft";
+    public static final String TURRET_ENCODER_RIGHT = "turretEncRight";
 
     // Pinpoint: posición de los pods respecto al centro del robot, en milímetros.
     // X pod (forward): negativo = a la derecha del centro. Y pod (strafe): negativo = atrás del centro.

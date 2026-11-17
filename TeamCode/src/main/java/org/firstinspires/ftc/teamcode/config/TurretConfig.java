@@ -1,8 +1,8 @@
 package org.firstinspires.ftc.teamcode.config;
 
 /**
- * Constantes de la torreta: 2 Axon MINI MK2 en modo continuo (CR) sobre el mismo eje, más el
- * 4.º cable de turretLeft en un puerto analógico.
+ * Constantes de la torreta: 2 Axon MINI MK2 en modo continuo (CR) sobre el mismo eje. El 4.º cable
+ * de cada servo va a un puerto analógico, así que hay dos encoders que deben coincidir.
  *
  * Convención de ángulos: 0° = home (torreta apuntando a la izquierda del robot).
  * Positivo = antihorario visto desde arriba.
@@ -12,27 +12,35 @@ package org.firstinspires.ftc.teamcode.config;
 public final class TurretConfig {
     private TurretConfig() {}
 
-    // ---------- Direcciones (MEDIR con Test 5, pasos 1 a 3) ----------
+    // ---------- Direcciones de los servos (MEDIR con Test 5) ----------
     /** true si turretLeft gira la torreta en horario con potencia positiva. */
     public static final boolean LEFT_REVERSED = false;
     /** true si turretRight gira la torreta en horario con potencia positiva. */
     public static final boolean RIGHT_REVERSED = false;
-    /** true si al girar la torreta en antihorario el ángulo del encoder BAJA. */
-    public static final boolean ENCODER_REVERSED = false;
 
-    // ---------- Encoder analógico (MEDIR con Test 5, paso 5) ----------
-    /** Voltaje mínimo y máximo que da el 4.º cable en una vuelta completa del servo. */
-    public static final double ENCODER_V_MIN = 0.0;
-    public static final double ENCODER_V_MAX = 3.3;
-    /**
-     * Voltaje del encoder con la torreta exactamente en home. Negativo = todavía no medido: en ese
-     * caso se toma como home la posición en la que esté la torreta al presionar INIT.
-     *
-     * Al encender, el encoder solo distingue una vuelta del servo = 180° de torreta. Por eso se
-     * asume que la torreta arranca a menos de 90° de home. Con HOME_VOLTAGE bien medido, cualquier
-     * arranque dentro de ±90° da el ángulo exacto; fuera de eso, el ángulo sale 180° equivocado.
+    // ---------- Encoder de turretLeft (MEDIR con Test 5) ----------
+    /** true si al girar la torreta en antihorario el ángulo de este encoder BAJA. */
+    public static final boolean LEFT_ENCODER_REVERSED = false;
+    /** Voltaje mínimo y máximo en una vuelta completa del servo. */
+    public static final double LEFT_ENCODER_V_MIN = 0.0;
+    public static final double LEFT_ENCODER_V_MAX = 3.3;
+    /** Voltaje con la torreta en home. Negativo = sin medir: se usa la posición al presionar INIT. */
+    public static final double LEFT_HOME_VOLTAGE = -1;
+
+    // ---------- Encoder de turretRight (MEDIR con Test 5) ----------
+    public static final boolean RIGHT_ENCODER_REVERSED = false;
+    public static final double RIGHT_ENCODER_V_MIN = 0.0;
+    public static final double RIGHT_ENCODER_V_MAX = 3.3;
+    public static final double RIGHT_HOME_VOLTAGE = -1;
+
+    /*
+     * Al encender, cada encoder solo distingue una vuelta del servo = 180° de torreta. Por eso se
+     * asume que la torreta arranca a menos de 90° de home: dentro de eso, el ángulo sale exacto;
+     * fuera, sale 180° equivocado.
      */
-    public static final double HOME_VOLTAGE = -1;
+
+    /** Si los dos encoders difieren más que esto (grados de torreta), algo anda mal. */
+    public static final double ENCODER_MISMATCH_DEG = 5.0;
 
     // ---------- Mecánica ----------
     /** Vueltas del servo por cada vuelta de la torreta. */

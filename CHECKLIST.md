@@ -45,7 +45,8 @@ Los nombres deben quedar **idénticos**, con mayúsculas y minúsculas. Están d
 | Dónde | Nombre | Tipo |
 |---|---|---|
 | Expansion Hub, I2C bus 0 | `pinpoint` | goBILDA Pinpoint Odometry Computer |
-| Control Hub, analógico 0 | `turretEnc` | Analog Input (4.º cable de `turretLeft`) |
+| Control Hub, analógico 0 (conector 0-1, pin azul) | `turretEncLeft` | Analog Input (4.º cable de `turretLeft`) |
+| Expansion Hub, analógico 2 (conector 2-3, pin azul) | `turretEncRight` | Analog Input (4.º cable de `turretRight`) |
 | Control Hub, USB 3.0 (azul) | `limelight` | Limelight 3A (aparece con Scan) |
 
 - [ ] Pinpoint configurado. Su dirección I2C es fija (0x31); no hay nada que cambiar.
@@ -92,12 +93,14 @@ Antes de la prueba 5:
    `Axon_MINI_MK2_CR_Mode.sfm` en los dos. Deben quedar con la misma configuración.
 2. Revisa que **Lose PPM Protection** esté en **Release** en los dos: así el servo sin señal queda
    suelto y no frena al otro.
-3. Conecta el 4.º cable de `turretLeft` al analógico 0 del Control Hub (puede necesitar el
-   adaptador JST de Axon).
+3. Conecta el 4.º cable de cada servo: `turretLeft` al analógico 0 del Control Hub y
+   `turretRight` al analógico 2 del Expansion Hub (en ambos, el pin del cable azul). Con los dos,
+   el código compara las lecturas y detecta si un engrane patina o un cable falla.
 4. Gira la torreta a mano por todo el rango: la cadena no debe tensarse. Marca los dos límites y
    la posición de home con cinta.
-5. Al engranar, procura que **en home el voltaje del encoder quede cerca de 1.65 V** (la mitad).
-   Así el robot sabe su ángulo exacto aunque arranque hasta ±90° fuera de home.
+5. El robot sabe su ángulo exacto si arranca a menos de ±90° de home, sin importar en qué voltaje
+   quede home. Aun así, si se puede, conviene que en home cada encoder **no** quede justo en el
+   salto de 3.3 V a 0 V, donde la lectura puede ser inestable.
 
 **No uses la prueba 2 con la torreta**: esa prueba trata a los servos como de posición, y en
 modo continuo los haría girar sin límites. La prueba 5 empieza con un solo servo, limita el giro
@@ -120,7 +123,7 @@ Compilar y cargar desde Android Studio, o con:
 | 2 | Test 2: Servos | Manos lejos; todo empieza suelto |
 | 3 | Test 3: Pinpoint | Robot en el piso, se empuja a mano |
 | 4 | Test 4: Limelight | Torreta quieta, un tag a la vista |
-| 5 | Test 5: Torreta | Firmware CR y encoder conectado; torreta en la marca de home |
+| 5 | Test 5: Torreta | Firmware CR y encoders conectados; torreta en la marca de home |
 
 Los controles de cada prueba están en el comentario inicial de su archivo, en
 `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/opmodes/test/`.
@@ -150,9 +153,12 @@ Los controles de cada prueba están en el comentario inicial de su archivo, en
 
 **Torreta** (prueba 5; copiar a `TurretConfig.java`)
 
-- `LEFT_REVERSED`: true / false. `RIGHT_REVERSED`: true / false. `ENCODER_REVERSED`: true / false
-- `ENCODER_V_MIN`: ____ V. `ENCODER_V_MAX`: ____ V
-- `HOME_VOLTAGE`: ____ V (ideal: cerca de 1.65)
+- `LEFT_REVERSED`: true / false. `RIGHT_REVERSED`: true / false
+- Encoder izquierdo: `LEFT_ENCODER_REVERSED` true / false, V mín ____ V, V máx ____ V,
+  `LEFT_HOME_VOLTAGE` ____ V
+- Encoder derecho: `RIGHT_ENCODER_REVERSED` true / false, V mín ____ V, V máx ____ V,
+  `RIGHT_HOME_VOLTAGE` ____ V
+- ¿Los dos encoders coinciden al recorrer todo el rango? Diferencia máxima: ____°
 - ¿Gira suave con los dos servos, sin tirones ni ruido?: sí / no
 - ¿Se mueve sola con potencia 0? (si sí, ajustar Neutral): sí / no
 - ¿Los límites del código (-40° y 360°) coinciden con las marcas físicas?: sí / no
