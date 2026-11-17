@@ -17,8 +17,12 @@ package org.firstinspires.ftc.teamcode.config;
  *     5: flowerLeft                1: turretRight
  *                                  2: flowerRight
  *
+ *   Control Hub - analógico 0: turretEnc (4.º cable de turretLeft)
  *   Expansion Hub - I2C bus 0: pinpoint
  *   Control Hub - USB 3.0 (azul): limelight
+ *
+ * Tipos: turretLeft y turretRight son "Continuous Rotation Servo" (firmware CR del Axon);
+ * tope, flowerLeft y flowerRight son "Servo".
  */
 public final class RobotMap {
     private RobotMap() {}
@@ -38,8 +42,8 @@ public final class RobotMap {
     public static final String INTAKE_RIGHT = "intakeRight";
 
     // Servos
-    public static final String TURRET_LEFT  = "turretLeft";   // Axon MINI MK2
-    public static final String TURRET_RIGHT = "turretRight";  // Axon MINI MK2
+    public static final String TURRET_LEFT  = "turretLeft";   // Axon MINI MK2, modo continuo
+    public static final String TURRET_RIGHT = "turretRight";  // Axon MINI MK2, modo continuo
     public static final String TOPE         = "tope";         // Axon MINI MK2 (indexer)
     public static final String FLOWER_LEFT  = "flowerLeft";   // Swyft speed servo
     public static final String FLOWER_RIGHT = "flowerRight";  // Swyft speed servo
@@ -48,7 +52,7 @@ public final class RobotMap {
     public static final String PINPOINT  = "pinpoint";
     public static final String LIMELIGHT = "limelight";
 
-    /** Opcional: 4.º cable de un Axon de la torreta en un puerto analógico. Hoy no está conectado. */
+    /** 4.º cable de turretLeft (posición del servo dentro de una vuelta), tipo "Analog Input". */
     public static final String TURRET_ENCODER = "turretEnc";
 
     // Pinpoint: posición de los pods respecto al centro del robot, en milímetros.
@@ -59,7 +63,8 @@ public final class RobotMap {
     // Ticks por vuelta del eje de un Yellow Jacket 1:1 (6000 RPM)
     public static final double SHOOTER_TICKS_PER_REV = 28.0;
 
-    // Pulso que aceptan los Axon MK2 en modo posición (el SDK usa 600-2400 por defecto)
+    // Pulso que aceptan los Axon MK2 en modo posición (el SDK usa 600-2400 por defecto).
+    // Para los servos de la torreta en modo continuo, ver TurretConfig.
     public static final double SERVO_PWM_MIN_US = 500;
     public static final double SERVO_PWM_MAX_US = 2500;
 }
