@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.config.RobotMap;
+import org.firstinspires.ftc.teamcode.subsystems.Vision;
 
 /*
  * Verifica la Limelight 3A: conexión, AprilTags a la vista, MegaTag 1 y MegaTag 2.
@@ -100,6 +101,17 @@ public class VisionTestOpMode extends LinearOpMode {
                 for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
                     telemetry.addData("  Tag " + tag.getFiducialId(), "%s   tx %.1f°  ty %.1f°",
                             describeTag(tag.getFiducialId()), tag.getTargetXDegrees(), tag.getTargetYDegrees());
+                    // Posición respecto al eje de la torreta, como la usa el apuntado. Revisa con
+                    // cinta: "adelante" y "distancia" deben coincidir con lo medido, y el ángulo
+                    // debe ser casi igual a -tx.
+                    double[] turret = Vision.cameraToTurret(tag.getTargetPoseCameraSpace());
+                    if (turret != null) {
+                        telemetry.addData("    desde la torreta", "adelante %.1f  izq %.1f  arriba %.1f in  |  distancia %.1f in  ángulo %.1f°",
+                                turret[0], turret[1], turret[2], Math.hypot(turret[0], turret[1]),
+                                Math.toDegrees(Math.atan2(turret[1], turret[0])));
+                    } else {
+                        telemetry.addData("    desde la torreta", "sin posición 3D (¿Full 3D Targeting en Yes?)");
+                    }
                 }
 
                 Pose3D mt1 = result.getBotpose();

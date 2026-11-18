@@ -62,9 +62,10 @@ instala, se abre directo). El modo se cambia cargando firmware: `Axon_MINI_MK2_S
   recorre unos 350° en ese rango (0.175° por µs).
 - **Modo continuo** (torreta): el código manda **1050 a 1950 µs** (potencia -1 a 1); 1500 µs es
   detenido. Si la torreta se mueve sola sin potencia, se corrige con **Neutral**.
-- **Tope**, medido con el programador y configuración de fábrica (L 250, R 250, Neutral 0):
-  abierto = **1802 µs** (posición 0.651), cerrado = **2300 µs** (posición 0.900).
-- De los Swyft no hay datos confirmados. La prueba 2 dice cómo se comportan.
+- **Tope** (configuración de fábrica: L 250, R 250, Neutral 0), medido en el robot con la
+  prueba 2: abierto = **1900 µs** (posición 0.700), cerrado = **2295 µs** (posición 0.8975).
+  Con el programador había salido abierto 1802 µs; manda la medida en el robot.
+- **Swyft (flower)**: en modo posición. Valores en la hoja de resultados.
 
 ## 3. Pinpoint
 
@@ -124,6 +125,7 @@ Compilar y cargar desde Android Studio, o con:
 | 3 | Test 3: Pinpoint | Robot en el piso, se empuja a mano |
 | 4 | Test 4: Limelight | Torreta quieta, un tag a la vista |
 | 5 | Test 5: Torreta | Firmware CR y encoders conectados; torreta en la marca de home |
+| 6 | Test 6: Tiro | Pruebas 1-5 listas; robot viendo la CELL; pelotas POLLEN |
 
 Los controles de cada prueba están en el comentario inicial de su archivo, en
 `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/opmodes/test/`.
@@ -149,9 +151,16 @@ Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
 
 | Servo | ¿Posición o continuo? | Valores |
 |---|---|---|
-| tope | posición | abierto: 0.651 (1802 µs) cerrado: 0.900 (2300 µs) |
-| flowerLeft | | guardado: ____ extrayendo: ____ |
-| flowerRight | | guardado: ____ extrayendo: ____ |
+| tope | posición | abierto: 0.700 (1900 µs) cerrado: 0.8975 (2295 µs) |
+| flowerLeft | posición | arriba: 0.830 (2160 µs) abajo: 0.4875 (1475 µs) |
+| flowerRight | posición | arriba: 0.200 (900 µs) abajo: 0.490 (1480 µs) |
+
+- Los dos flower mueven la misma pieza, montados en espejo: cada uno se calibra solo (con el
+  otro suelto) y giran en sentidos contrarios.
+- flowerRight abajo se midió primero en 0.750 (solo, empujaba contra el tope); con los dos
+  juntos zumbaba y se corrigió a 0.490.
+- [ ] En la prueba 2, modo "flower juntos" (botón X / □): los dos energizados, recorrido
+      completo de arriba a abajo con el stick, y ninguno zumba en ningún punto.
 
 **Torreta** (prueba 5; copiar a `TurretConfig.java`)
 
@@ -177,3 +186,36 @@ Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
 - Tags que ve desde la posición de inicio: ____
 - ¿MegaTag 2 se mantiene estable al girar el chasis?: sí / no
 - Altura de la lente sobre el piso: ____ cm
+
+## 8. Código de competencia (Fase 2)
+
+Ya está escrito todo: `subsystems/`, `commands/`, `diagnostics/`, `Robot.java`, el TeleOp
+**Furby TeleOp** y los autónomos **Furby Auto ROJO / AZUL**. Los controles están en el comentario
+inicial de `opmodes/teleop/CompetitionTeleOp.java`.
+
+### Panels (dashboard)
+
+Con la laptop en la red del robot: **http://192.168.43.1:8001**. Ahí se ve la telemetría y se
+cambian en vivo las constantes de `config/*Constants.java` (RPM, PID de la torreta, etc.). Lo que
+se cambia en Panels se pierde al reiniciar: los valores buenos se copian al código.
+
+### Cómo apunta (importante)
+
+Los tags de BIOBUZZ están en las CELLS, que se voltean; el SDK no les da posición fija en el campo.
+Por eso el robot no se ubica con los tags para apuntar: cuando la Limelight ve la CELL de arriba,
+calcula dónde está respecto al robot y la guarda con el Pinpoint. Si deja de verla, sigue
+apuntando con el Pinpoint. MegaTag 2 queda disponible pero apagado (`VisionConstants.USE_MEGATAG`).
+
+### Falta medir o llenar
+
+- [ ] `VisionConstants.TURRET_AXIS_FORWARD_IN` / `TURRET_AXIS_LEFT_IN`: dónde está el eje de la
+      torreta respecto al centro del robot (pulgadas).
+- [ ] Test 4: con un tag a distancia conocida, "desde la torreta → distancia" debe coincidir con la
+      cinta y el ángulo debe ser casi `-tx`. Si no, revisar `CAMERA_PITCH_DEG` y `CAMERA_BEHIND_AXIS_IN`.
+- [ ] Test 6: tabla de tiro (`ShooterConstants.TABLE_*`) desde 6 a 10 distancias.
+- [ ] `ShooterConstants.TOF_SECONDS`: tiempo de vuelo cerca y lejos (video) para disparar en movimiento.
+- [ ] `MechanismConstants.INTAKE_LEFT_IS_FRONT`: ¿intakeLeft es el de enfrente?
+- [ ] Afinar `TurretConstants` (KP, KD, KS, KV) en Panels hasta que la torreta llegue rápido sin oscilar.
+- [ ] Autónomo completo: tunear Pedro (`pedro/Tuning.java`), copiar resultados a `pedro/Constants.java`
+      con `FORESIGHT_TUNED = true`, medir poses en `AutoConstants` y `PATHS_CONFIGURED = true`.
+      Mientras no, el autónomo dispara las precargadas y sale de la zona.

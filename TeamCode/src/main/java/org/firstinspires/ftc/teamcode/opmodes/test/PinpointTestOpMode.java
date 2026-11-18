@@ -21,18 +21,14 @@ import org.firstinspires.ftc.teamcode.config.RobotMap;
  *   hacia ADELANTE          -> X sube
  *   hacia la IZQUIERDA      -> Y sube
  *   girar ANTIHORARIO       -> heading sube
- * Si X o Y bajan, cambia la dirección de ese pod (X_POD_DIRECTION / Y_POD_DIRECTION aquí abajo)
- * y anota el valor correcto: se usará igual en el resto del código.
+ * Si X o Y bajan, cambia la dirección de ese pod en RobotMap (PINPOINT_X_POD_DIRECTION /
+ * PINPOINT_Y_POD_DIRECTION): de ahí la toman esta prueba, el TeleOp y PedroPathing.
  *
  * Prueba de offsets: gira el robot 10 vueltas sobre su centro. X y Y deben regresar cerca de 0.
  * Si se alejan mucho, los offsets de RobotMap están mal medidos.
  */
 @TeleOp(name = "Test 3: Pinpoint", group = "Test")
 public class PinpointTestOpMode extends LinearOpMode {
-
-    // Valores por confirmar en el robot con la prueba de arriba
-    static final GoBildaPinpointDriver.EncoderDirection X_POD_DIRECTION = GoBildaPinpointDriver.EncoderDirection.FORWARD;
-    static final GoBildaPinpointDriver.EncoderDirection Y_POD_DIRECTION = GoBildaPinpointDriver.EncoderDirection.FORWARD;
 
     // El Pinpoint actualiza a unos 1500 Hz. Fuera de este rango, algo anda mal con el módulo.
     static final double MIN_FREQUENCY_HZ = 900;
@@ -53,7 +49,7 @@ public class PinpointTestOpMode extends LinearOpMode {
 
         pinpoint.setOffsets(RobotMap.PINPOINT_X_POD_OFFSET_MM, RobotMap.PINPOINT_Y_POD_OFFSET_MM, DistanceUnit.MM);
         pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        pinpoint.setEncoderDirections(X_POD_DIRECTION, Y_POD_DIRECTION);
+        pinpoint.setEncoderDirections(RobotMap.PINPOINT_X_POD_DIRECTION, RobotMap.PINPOINT_Y_POD_DIRECTION);
         pinpoint.resetPosAndIMU();
 
         telemetry.addLine("Pinpoint encontrado. Deja el robot quieto y presiona PLAY.");

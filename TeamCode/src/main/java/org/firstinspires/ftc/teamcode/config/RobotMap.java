@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.config;
 
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver.EncoderDirection;
 import com.qualcomm.robotcore.hardware.DcMotorSimple.Direction;
 
 /**
@@ -62,6 +63,18 @@ public final class RobotMap {
     public static final String FLOWER_LEFT  = "flowerLeft";   // Swyft speed servo
     public static final String FLOWER_RIGHT = "flowerRight";  // Swyft speed servo
 
+    // Posiciones del tope medidas con "Test 2: Servos" (2026-11-17), con PWM 500-2500 µs.
+    public static final double TOPE_OPEN   = 0.700;   // 1900 µs
+    public static final double TOPE_CLOSED = 0.8975;  // 2295 µs
+
+    // Posiciones del flower, cada servo medido solo (2026-11-17). Están en espejo: giran al revés.
+    // flowerRight abajo se corrigió de 0.750 a 0.490 porque zumbaba con los dos juntos.
+    // Confirmar con el modo "juntos" de "Test 2: Servos" que no zumben en ningún punto.
+    public static final double FLOWER_LEFT_UP    = 0.830;   // 2160 µs
+    public static final double FLOWER_LEFT_DOWN  = 0.4875;  // 1475 µs
+    public static final double FLOWER_RIGHT_UP   = 0.200;   //  900 µs
+    public static final double FLOWER_RIGHT_DOWN = 0.490;   // 1480 µs
+
     // Sensores
     public static final String PINPOINT  = "pinpoint";
     public static final String LIMELIGHT = "limelight";
@@ -74,6 +87,10 @@ public final class RobotMap {
     // X pod (forward): negativo = a la derecha del centro. Y pod (strafe): negativo = atrás del centro.
     public static final double PINPOINT_X_POD_OFFSET_MM = -82.5;
     public static final double PINPOINT_Y_POD_OFFSET_MM = -70.74;
+    // Dirección de cada pod: se confirma con "Test 3: Pinpoint" (empujar adelante: X sube;
+    // empujar a la izquierda: Y sube). Lo usan la prueba, el TeleOp y PedroPathing.
+    public static final EncoderDirection PINPOINT_X_POD_DIRECTION = EncoderDirection.FORWARD;
+    public static final EncoderDirection PINPOINT_Y_POD_DIRECTION = EncoderDirection.FORWARD;
 
     // Ticks por vuelta del eje de un Yellow Jacket 1:1 (6000 RPM)
     public static final double SHOOTER_TICKS_PER_REV = 28.0;
