@@ -132,16 +132,18 @@ Los controles de cada prueba están en el comentario inicial de su archivo, en
 
 **Motores** (con potencia positiva, ¿hacia dónde gira?)
 
-| Motor | Barrido OK | Sentido con potencia + |
-|---|---|---|
-| frontLeft | | empuja el robot adelante / atrás |
-| backLeft | | adelante / atrás |
-| frontRight | | adelante / atrás |
-| backRight | | adelante / atrás |
-| shooterLeft | | lanza / regresa |
-| shooterRight | | lanza / regresa |
-| intakeLeft | | mete / saca. ¿Es el de enfrente o el de atrás? |
-| intakeRight | | mete / saca. ¿Es el de enfrente o el de atrás? |
+Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
+
+| Motor | Barrido OK | Sentido con potencia + | Dirección en código |
+|---|---|---|---|
+| frontLeft | | atrás | REVERSE |
+| backLeft | | atrás | REVERSE |
+| frontRight | | adelante | FORWARD |
+| backRight | | adelante | FORWARD |
+| shooterLeft | | regresa | REVERSE |
+| shooterRight | | regresa | REVERSE |
+| intakeLeft | | mete. ¿Es el de enfrente o el de atrás? | FORWARD |
+| intakeRight | | mete. ¿Es el de enfrente o el de atrás? | FORWARD |
 
 **Servos**
 

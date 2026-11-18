@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.config;
 
+import com.qualcomm.robotcore.hardware.DcMotorSimple.Direction;
+
 /**
  * Nombres EXACTOS de cada dispositivo en la configuración del robot (Driver Hub).
  * Todo el código usa estas constantes: si cambias un nombre, cámbialo solo aquí.
@@ -41,6 +43,17 @@ public final class RobotMap {
     // Intakes (goBILDA 1620 RPM)
     public static final String INTAKE_LEFT  = "intakeLeft";
     public static final String INTAKE_RIGHT = "intakeRight";
+
+    // Direcciones medidas con "Test 1: Motores" (2026-11-17). Con estas, potencia positiva =
+    // chasis hacia adelante, shooter lanza, intake mete.
+    public static final Direction FRONT_LEFT_DIRECTION    = Direction.REVERSE;
+    public static final Direction BACK_LEFT_DIRECTION     = Direction.REVERSE;
+    public static final Direction FRONT_RIGHT_DIRECTION   = Direction.FORWARD;
+    public static final Direction BACK_RIGHT_DIRECTION    = Direction.FORWARD;
+    public static final Direction SHOOTER_LEFT_DIRECTION  = Direction.REVERSE;
+    public static final Direction SHOOTER_RIGHT_DIRECTION = Direction.REVERSE;
+    public static final Direction INTAKE_LEFT_DIRECTION   = Direction.FORWARD;
+    public static final Direction INTAKE_RIGHT_DIRECTION  = Direction.FORWARD;
 
     // Servos
     public static final String TURRET_LEFT  = "turretLeft";   // Axon MINI MK2, modo continuo
