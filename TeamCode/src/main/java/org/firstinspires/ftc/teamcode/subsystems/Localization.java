@@ -29,6 +29,7 @@ public class Localization {
     private double vx, vy, omega;               // marco del campo: pulg/s y rad/s
     private long lastNanos;
     private boolean hasLast;
+    private boolean ready;
 
     /**
      * @param localizer   el localizador ya creado (el del Follower en el autónomo), o null para
@@ -45,14 +46,28 @@ public class Localization {
         this.ownsUpdates = ownsUpdates;
     }
 
+    /**
+     * true si hay Pinpoint y está en READY. Si está en la configuración pero no termina de
+     * arrancar (LED rojo), sus datos no sirven: el robot maneja robot-centric y apunta solo con
+     * la cámara.
+     */
     public boolean isAvailable() {
+        return localizer != null && ready;
+    }
+
+    /** true si el Pinpoint existe en la configuración (aunque no esté listo). */
+    public boolean isConfigured() {
         return localizer != null;
     }
 
     /** Lee el Pinpoint (si le toca a esta clase) y calcula la velocidad. */
     public void update() {
-        if (localizer == null) return;
+        if (localizer == null) {
+            lastNanos = System.nanoTime();   // el historial sigue guardando el ángulo de la torreta
+            return;
+        }
         if (ownsUpdates) localizer.update();
+        ready = pinpoint.getDeviceStatus() == GoBildaPinpointDriver.DeviceStatus.READY;
         Pose current = localizer.pose();
         long now = System.nanoTime();
         if (hasLast) {

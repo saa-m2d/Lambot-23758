@@ -27,6 +27,8 @@ public class Shooter implements Subsystem {
     private double powerLeft, powerRight;
     private boolean ready;
     private final ElapsedTime readyTimer = new ElapsedTime();
+    private final ElapsedTime loopTimer = new ElapsedTime();
+    private double integralLeft, integralRight;
 
     public Shooter(HardwareCheck hardware, BatteryMonitor battery) {
         this.battery = battery;
@@ -78,11 +80,18 @@ public class Shooter implements Subsystem {
         if (!enabled) {
             powerLeft = 0;
             powerRight = 0;
+            integralLeft = 0;
+            integralRight = 0;
+            loopTimer.reset();
             ready = false;
         } else {
             double compensation = ShooterConstants.NOMINAL_VOLTAGE / battery.voltage();
-            powerLeft = control(targetLeft, rpmLeft, compensation);
-            powerRight = control(targetRight, rpmRight, compensation);
+            double dt = Math.min(loopTimer.seconds(), 0.1);
+            loopTimer.reset();
+            integralLeft = updateIntegral(integralLeft, targetLeft, rpmLeft, dt);
+            integralRight = updateIntegral(integralRight, targetRight, rpmRight, dt);
+            powerLeft = control(targetLeft, rpmLeft, compensation, integralLeft);
+            powerRight = control(targetRight, rpmRight, compensation, integralRight);
 
             boolean within = Math.abs(targetLeft - rpmLeft) < ShooterConstants.READY_TOLERANCE_RPM
                     && Math.abs(targetRight - rpmRight) < ShooterConstants.READY_TOLERANCE_RPM;
@@ -93,11 +102,30 @@ public class Shooter implements Subsystem {
         right.setPower(powerRight);
     }
 
-    private static double control(double target, double measured, double voltageCompensation) {
+    /**
+     * Integral del error, ya en unidades de potencia. Solo acumula cerca del objetivo (así no se
+     * pasa al arrancar) y tiene un tope. Corrige que KV no sea exacto o que la batería esté baja:
+     * sin ella, el motor se queda unas RPM abajo y nunca queda "listo".
+     */
+    private static double updateIntegral(double integral, double target, double measured, double dt) {
+        if (target <= 0) return 0;
+        double error = target - measured;
+        if (Math.abs(error) > ShooterConstants.INTEGRAL_ZONE_RPM) return integral;
+        double max = ShooterConstants.INTEGRAL_MAX_POWER;
+        return Range.clip(integral + ShooterConstants.KI * error * dt, -max, max);
+    }
+
+    private static double control(double target, double measured, double voltageCompensation, double integral) {
         if (target <= 0) return 0;
         double feedforward = (ShooterConstants.KS + ShooterConstants.KV * target) * voltageCompensation;
-        double feedback = ShooterConstants.KP * (target - measured);
+        double feedback = ShooterConstants.KP * (target - measured) + integral;
         return Range.clip(feedforward + feedback, 0, 1);   // sin frenar en reversa
+    }
+
+    /** true si el motor ya está a potencia máxima y aun así no llega (pide menos RPM o carga la batería). */
+    public boolean isSaturated() {
+        return enabled && ((powerLeft >= 0.99 && rpmLeft < targetLeft - ShooterConstants.READY_TOLERANCE_RPM)
+                || (powerRight >= 0.99 && rpmRight < targetRight - ShooterConstants.READY_TOLERANCE_RPM));
     }
 
     /** true si los dos motores están en su objetivo (y el shooter está encendido). */

@@ -5,6 +5,14 @@ Robot de LamBot 23758 para BIOBUZZ (FTC 2026-2027). SDK 12.0, PedroPathing 3.0.2
 Esta fase solo tiene pruebas. Su objetivo es confirmar el cableado y medir lo que el resto del
 código necesita. Al final hay una hoja de resultados: llénala y con eso se escribe la Fase 2.
 
+## 0. Regla del Control Hub: nada de OnBot Java
+
+PedroPathing (su herramienta de tuneo) y Panels traen una librería llamada **Sloth**. Si en el
+Control Hub hay cualquier programa compilado en **OnBot Java**, Sloth truena la app completa al
+arrancar ("Fatal class locating error occurred while running Sloth"). Si aparece ese error:
+página del robot (http://192.168.43.1:8080) → OnBot Java → borrar todos los archivos → **Build** →
+apagar y prender el robot. Para probar algo rápido, se agrega un OpMode a este proyecto.
+
 ## 1. Configuración en el Driver Hub
 
 Los nombres deben quedar **idénticos**, con mayúsculas y minúsculas. Están definidos en
@@ -80,8 +88,9 @@ instala, se abre directo). El modo se cambia cargando firmware: `Axon_MINI_MK2_S
 - [ ] Firmware actualizado y número de equipo 23758.
 - [ ] Pipeline 0 de tipo AprilTag, familia 36h11, tamaño de tag **82.5 mm** (3.25 in).
 - [ ] Mapa de campo de BIOBUZZ (.fmap) cargado. Sin él no hay MegaTag.
-- [ ] Posición de la cámara: 9.5 cm atrás del eje de la torreta, centrada, inclinada 54° hacia
-      arriba. **Falta medir la altura de la lente sobre el piso.**
+- [x] Posición de la cámara: 9.5 cm atrás del eje de la torreta, centrada, lente a **36° sobre la
+      horizontal** (la cara de la cámara está a 54° del piso). Confirmado con Test 4: a 33 in
+      medidas, el robot calcula 33 in. En la página de la Limelight, **LL Pitch = 36**.
 
 ## 5. Torreta: modo continuo con encoder
 
@@ -120,12 +129,13 @@ Compilar y cargar desde Android Studio, o con:
 
 | # | OpMode | Preparación |
 |---|---|---|
-| 1 | Test 1: Motores | Robot sobre bloques, sin pelotas |
+| 1 | Test 1: Motores | Ya hecha (resultados abajo); se quitó del código a propósito |
 | 2 | Test 2: Servos | Manos lejos; todo empieza suelto |
 | 3 | Test 3: Pinpoint | Robot en el piso, se empuja a mano |
 | 4 | Test 4: Limelight | Torreta quieta, un tag a la vista |
 | 5 | Test 5: Torreta | Firmware CR y encoders conectados; torreta en la marca de home |
 | 6 | Test 6: Tiro | Pruebas 1-5 listas; robot viendo la CELL; pelotas POLLEN |
+| 7 | Test 7: Intake y tiro | Solo intakes, tope y shooter (sin torreta ni Limelight); revisar RPM |
 
 Los controles de cada prueba están en el comentario inicial de su archivo, en
 `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/opmodes/test/`.
@@ -152,13 +162,14 @@ Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
 | Servo | ¿Posición o continuo? | Valores |
 |---|---|---|
 | tope | posición | abierto: 0.700 (1900 µs) cerrado: 0.8975 (2295 µs) |
-| flowerLeft | posición | arriba: 0.830 (2160 µs) abajo: 0.4875 (1475 µs) |
-| flowerRight | posición | arriba: 0.200 (900 µs) abajo: 0.490 (1480 µs) |
+| flowerLeft | posición | arriba: 0.830 (2160 µs) abajo: 0.3281 (1156 µs) |
+| flowerRight | posición | arriba: 0.200 (900 µs) abajo: 0.7019 (1904 µs) |
 
 - Los dos flower mueven la misma pieza, montados en espejo: cada uno se calibra solo (con el
   otro suelto) y giran en sentidos contrarios.
-- flowerRight abajo se midió primero en 0.750 (solo, empujaba contra el tope); con los dos
-  juntos zumbaba y se corrigió a 0.490.
+- Los dos servos usan el mismo recorrido en espejo (0.5019). Con 0.5425 se pasaba ~10°;
+  estimado: 0.0406 de posición ≈ 10°. Con valores que no son espejo, los servos pelean
+  (zumbido; el hub bajó a 5.65 V).
 - [ ] En la prueba 2, modo "flower juntos" (botón X / □): los dos energizados, recorrido
       completo de arriba a abajo con el stick, y ninguno zumba en ningún punto.
 
@@ -176,9 +187,15 @@ Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
 
 **Pinpoint**
 
-- Estado READY: sí / no
-- Dirección pod X: FORWARD / REVERSED. Dirección pod Y: FORWARD / REVERSED
-- Tras 10 vueltas sobre su centro, X y Y regresaron a: ____ , ____ cm
+Medido el 2026-11-18 y copiado a `RobotMap.java`:
+
+- Estado READY: sí; frecuencia dentro de 900-2000 Hz.
+- Dirección pod X: **FORWARD**. Dirección pod Y: **REVERSED** (a la izquierda Y bajaba).
+- Tras 10 vueltas sobre su centro, X y Y regresaron casi a 0.
+- [ ] Con el pod Y ya invertido: girar despacio 90° y revisar que X y Y se queden cerca de 0
+      durante todo el giro (no solo al final).
+- Antes de que quedara en verde, el LED se quedaba en rojo (NOT_READY) por algo conectado al
+  Expansion Hub que bajaba su línea de 3.3 V; se resolvió desconectando y reconectando.
 
 **Limelight**
 

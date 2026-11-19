@@ -68,12 +68,14 @@ public final class RobotMap {
     public static final double TOPE_CLOSED = 0.8975;  // 2295 µs
 
     // Posiciones del flower, cada servo medido solo (2026-11-17). Están en espejo: giran al revés.
-    // flowerRight abajo se corrigió de 0.750 a 0.490 porque zumbaba con los dos juntos.
-    // Confirmar con el modo "juntos" de "Test 2: Servos" que no zumben en ningún punto.
+    // Abajo (2026-11-18): los dos con el mismo recorrido en espejo, porque mueven la misma pieza
+    // con el mismo brazo. Recorrido 0.5019 (abajo quedó 10° más arriba que con 0.5425; en estos
+    // servos ~0.0406 de posición = 10°, estimado de "0.2437 = 60°").
+    // Confirmar con el modo "juntos" de "Test 2" que no zumben en ningún punto.
     public static final double FLOWER_LEFT_UP    = 0.830;   // 2160 µs
-    public static final double FLOWER_LEFT_DOWN  = 0.4875;  // 1475 µs
+    public static final double FLOWER_LEFT_DOWN  = 0.3281;  // 1156 µs
     public static final double FLOWER_RIGHT_UP   = 0.200;   //  900 µs
-    public static final double FLOWER_RIGHT_DOWN = 0.490;   // 1480 µs
+    public static final double FLOWER_RIGHT_DOWN = 0.7019;  // 1904 µs
 
     // Sensores
     public static final String PINPOINT  = "pinpoint";
@@ -87,10 +89,10 @@ public final class RobotMap {
     // X pod (forward): negativo = a la derecha del centro. Y pod (strafe): negativo = atrás del centro.
     public static final double PINPOINT_X_POD_OFFSET_MM = -82.5;
     public static final double PINPOINT_Y_POD_OFFSET_MM = -70.74;
-    // Dirección de cada pod: se confirma con "Test 3: Pinpoint" (empujar adelante: X sube;
-    // empujar a la izquierda: Y sube). Lo usan la prueba, el TeleOp y PedroPathing.
+    // Dirección de cada pod, medida con "Test 3: Pinpoint" (2026-11-18): adelante X subía bien;
+    // a la izquierda Y bajaba, por eso el pod Y va en REVERSED. Lo usan la prueba, el TeleOp y Pedro.
     public static final EncoderDirection PINPOINT_X_POD_DIRECTION = EncoderDirection.FORWARD;
-    public static final EncoderDirection PINPOINT_Y_POD_DIRECTION = EncoderDirection.FORWARD;
+    public static final EncoderDirection PINPOINT_Y_POD_DIRECTION = EncoderDirection.REVERSED;
 
     // Ticks por vuelta del eje de un Yellow Jacket 1:1 (6000 RPM)
     public static final double SHOOTER_TICKS_PER_REV = 28.0;

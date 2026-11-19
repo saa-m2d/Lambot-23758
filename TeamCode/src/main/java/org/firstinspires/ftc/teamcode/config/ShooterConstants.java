@@ -20,6 +20,12 @@ public class ShooterConstants {
     public static double KS = 0.03;
     /** Corrección proporcional por cada RPM de error. */
     public static double KP = 0.0006;
+    /** Corrección integral: potencia por (RPM de error × segundo). Quita el error que deja KP solo. */
+    public static double KI = 0.0005;
+    /** La integral solo acumula si el error es menor a esto (evita pasarse al arrancar). */
+    public static double INTEGRAL_ZONE_RPM = 600;
+    /** Máximo que puede aportar la integral (potencia). */
+    public static double INTEGRAL_MAX_POWER = 0.3;
     /** Voltaje con el que se calcula KV. Con la batería más baja, la potencia sube para compensar. */
     public static double NOMINAL_VOLTAGE = 12.0;
     /** RPM máximas que se le piden al shooter. */

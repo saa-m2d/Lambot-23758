@@ -55,6 +55,7 @@ public class ErrorDetectionSystem {
     private final Debounce shooterRightDead = new Debounce();
     private final Debounce limelightStale = new Debounce();
     private final Debounce turretEncoderDead = new Debounce();
+    private final Debounce pinpointStarting = new Debounce();
     private final Debounce[] driveOvercurrent = {new Debounce(), new Debounce(), new Debounce(), new Debounce()};
     private final Debounce[] shooterOvercurrent = {new Debounce(), new Debounce()};
 
@@ -89,8 +90,12 @@ public class ErrorDetectionSystem {
         // ---------- Pinpoint ----------
         GoBildaPinpointDriver.DeviceStatus status = robot.localization.pinpointStatus();
         if (status != null && status != GoBildaPinpointDriver.DeviceStatus.READY) {
-            add(status == GoBildaPinpointDriver.DeviceStatus.CALIBRATING ? Severity.WARNING : Severity.CRITICAL,
-                    "Pinpoint: " + status + ". Revisa pods y cable I2C; sin él no hay field-centric ni apuntado con odometría.");
+            boolean starting = status == GoBildaPinpointDriver.DeviceStatus.CALIBRATING
+                    || status == GoBildaPinpointDriver.DeviceStatus.NOT_READY;
+            add(starting && pinpointStarting.update(true, 3) ? Severity.CRITICAL : starting ? Severity.WARNING : Severity.CRITICAL,
+                    "Pinpoint: " + pinpointMessage(status));
+        } else {
+            pinpointStarting.update(false, 3);
         }
 
         // ---------- Limelight ----------
@@ -168,6 +173,28 @@ public class ErrorDetectionSystem {
         }
         previousCritical.clear();
         previousCritical.addAll(currentCritical);
+    }
+
+    /** Qué significa cada estado (LED del Pinpoint según goBILDA) y qué hacer. */
+    private static String pinpointMessage(GoBildaPinpointDriver.DeviceStatus status) {
+        switch (status) {
+            case CALIBRATING:
+            case NOT_READY:
+                return "arrancando o calibrando (LED rojo). Robot quieto. Si no pasa a verde en unos segundos, "
+                        + "se está reiniciando: revisa batería y el cable de poder del Expansion Hub.";
+            case FAULT_NO_PODS_DETECTED:
+                return "no detecta ningún pod (LED morado). Revisa los dos cables de los pods.";
+            case FAULT_X_POD_NOT_DETECTED:
+                return "no detecta el pod X (LED azul). Revisa su cable.";
+            case FAULT_Y_POD_NOT_DETECTED:
+                return "no detecta el pod Y (LED naranja). Revisa su cable.";
+            case FAULT_IMU_RUNAWAY:
+                return "el giroscopio se desbocó. Recalibra con el robot quieto.";
+            case FAULT_BAD_READ:
+                return "lectura I2C corrupta. Revisa el cable I2C (Expansion Hub, bus 0).";
+            default:
+                return status.toString();
+        }
     }
 
     private void add(Severity severity, String message) {

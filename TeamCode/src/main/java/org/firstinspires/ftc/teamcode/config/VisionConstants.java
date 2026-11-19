@@ -22,8 +22,11 @@ public class VisionConstants {
     public static double STALE_MS = 100;
 
     // ---------- Montaje de la cámara (respecto al eje de la torreta) ----------
-    /** Inclinación de la cámara hacia arriba, en grados. */
-    public static double CAMERA_PITCH_DEG = 54;
+    /**
+     * Inclinación de la lente sobre la horizontal, en grados. Medido con Test 4 (2026-11-19): 36°
+     * (la cara de la cámara está a 54° del piso; la lente apunta perpendicular a ella).
+     */
+    public static double CAMERA_PITCH_DEG = 36;
     /** Distancia de la lente detrás del eje de la torreta, en pulgadas (9.5 cm). */
     public static double CAMERA_BEHIND_AXIS_IN = 3.74;
 

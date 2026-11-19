@@ -54,7 +54,7 @@ import org.firstinspires.ftc.teamcode.config.RobotMap;
  *
  * Posiciones medidas en el robot con esta prueba (2026-11-17), copiadas a RobotMap:
  *   tope abierto = 0.700 (1900 µs), tope cerrado = 0.8975 (2295 µs)
- *   flowerLeft arriba = 0.830, abajo = 0.4875; flowerRight arriba = 0.200, abajo = 0.490
+ *   flowerLeft arriba = 0.830, abajo = 0.3281; flowerRight arriba = 0.200, abajo = 0.7019
  */
 @TeleOp(name = "Test 2: Servos", group = "Test")
 public class ServoCalibrationOpMode extends LinearOpMode {

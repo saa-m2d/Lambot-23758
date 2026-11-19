@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.config.RobotMap;
+import org.firstinspires.ftc.teamcode.config.VisionConstants;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 
 /*
@@ -25,6 +26,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Vision;
  *   X: sincronizar. Toma el heading que calcula MegaTag 1 y lo usa como ajuste para MegaTag 2.
  *      Hazlo con el robot quieto y viendo bien al menos un tag.
  *   D-pad arriba/abajo: cambiar de pipeline (0 a 9)
+ *   R1 / L1: ángulo de la cámara +1° / -1° (VisionConstants.CAMERA_PITCH_DEG; se pierde al salir)
  *
  * Después de sincronizar, gira el chasis: la posición de MT2 debe mantenerse casi igual y parecerse
  * a la de MT1. Si MT2 salta o se aleja, el heading que se le manda no es el de la cámara.
@@ -70,6 +72,9 @@ public class VisionTestOpMode extends LinearOpMode {
             if (gamepad1.dpadUpWasPressed() && pipeline < MAX_PIPELINE) limelight.pipelineSwitch(++pipeline);
             if (gamepad1.dpadDownWasPressed() && pipeline > 0) limelight.pipelineSwitch(--pipeline);
             boolean syncRequested = gamepad1.xWasPressed();
+            // Ajuste en vivo del ángulo de la cámara (para que la distancia coincida con la cinta)
+            if (gamepad1.rightBumperWasPressed()) VisionConstants.CAMERA_PITCH_DEG += 1;
+            if (gamepad1.leftBumperWasPressed()) VisionConstants.CAMERA_PITCH_DEG -= 1;
 
             double pinpointHeading = 0;
             if (pinpoint != null) {
@@ -85,6 +90,13 @@ public class VisionTestOpMode extends LinearOpMode {
             boolean valid = fresh && result.isValid();
 
             telemetry.addData("Conexión", limelight.isConnected() ? "OK" : "FALLA: sin comunicación (cable USB)");
+            telemetry.addData("Ángulo de la cámara", "%.0f° sobre la horizontal  (R1 +1°, L1 -1°)",
+                    VisionConstants.CAMERA_PITCH_DEG);
+            // Para diagnosticar: a qué dirección le habla el Control Hub y hace cuánto respondió
+            long sinceUpdate = limelight.getTimeSinceLastUpdate();
+            telemetry.addData("Red USB del hub", "%s  |  corriendo: %s  |  última respuesta: %s",
+                    limelight.getConnectionInfo(), limelight.isRunning() ? "sí" : "no",
+                    sinceUpdate > 100000 ? "nunca" : sinceUpdate + " ms");
             telemetry.addData("Limelight", "%s  %.0f fps  %.0f °C  CPU %.0f %%",
                     status.getName(), status.getFps(), status.getTemp(), status.getCpu());
             telemetry.addData("Pipeline", "%d (%s)", status.getPipelineIndex(), status.getPipelineType());
@@ -102,8 +114,9 @@ public class VisionTestOpMode extends LinearOpMode {
                     telemetry.addData("  Tag " + tag.getFiducialId(), "%s   tx %.1f°  ty %.1f°",
                             describeTag(tag.getFiducialId()), tag.getTargetXDegrees(), tag.getTargetYDegrees());
                     // Posición respecto al eje de la torreta, como la usa el apuntado. Revisa con
-                    // cinta: "adelante" y "distancia" deben coincidir con lo medido, y el ángulo
-                    // debe ser casi igual a -tx.
+                    // cinta: "adelante", "izquierda" y "distancia" (horizontal, desde el eje de la
+                    // torreta) deben coincidir con lo medido. El ángulo NO es igual a -tx: la
+                    // cámara está inclinada (36°), y con el tag alto el ángulo horizontal es mayor.
                     double[] turret = Vision.cameraToTurret(tag.getTargetPoseCameraSpace());
                     if (turret != null) {
                         telemetry.addData("    desde la torreta", "adelante %.1f  izq %.1f  arriba %.1f in  |  distancia %.1f in  ángulo %.1f°",
