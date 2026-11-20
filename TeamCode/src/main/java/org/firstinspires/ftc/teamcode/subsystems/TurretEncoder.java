@@ -10,8 +10,8 @@ import org.firstinspires.ftc.teamcode.util.MathUtil;
  * El 4.º cable de un Axon de la torreta: da la posición del servo dentro de una vuelta (0-3.3 V).
  * Esta clase cuenta las vueltas para dar el ángulo de la torreta desde home.
  *
- * Una vuelta del servo = 180° de torreta, así que al encender el ángulo solo se conoce "módulo
- * 180°". Se resuelve con una pista: el ángulo que se espera tener (0 = en home al empezar el
+ * Una vuelta del servo = 360°/GEAR_RATIO de torreta (~128°), así que al encender el ángulo solo
+ * se conoce "módulo una vuelta de servo". Se resuelve con una pista: el ángulo que se espera tener (0 = en home al empezar el
  * autónomo; el ángulo guardado por el autónomo al empezar el TeleOp).
  */
 public class TurretEncoder {

@@ -175,15 +175,16 @@ Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
 
 **Torreta** (prueba 5; copiar a `TurretConfig.java`)
 
-- `LEFT_REVERSED`: true / false. `RIGHT_REVERSED`: true / false
-- Encoder izquierdo: `LEFT_ENCODER_REVERSED` true / false, V mín ____ V, V máx ____ V,
-  `LEFT_HOME_VOLTAGE` ____ V
-- Encoder derecho: `RIGHT_ENCODER_REVERSED` true / false, V mín ____ V, V máx ____ V,
-  `RIGHT_HOME_VOLTAGE` ____ V
-- ¿Los dos encoders coinciden al recorrer todo el rango? Diferencia máxima: ____°
-- ¿Gira suave con los dos servos, sin tirones ni ruido?: sí / no
-- ¿Se mueve sola con potencia 0? (si sí, ajustar Neutral): sí / no
-- ¿Los límites del código (-40° y 360°) coinciden con las marcas físicas?: sí / no
+Calibrado el 2026-11-19 con la calibración automática del Test 5 (L1) y copiado a `TurretConfig.java`:
+
+- `LEFT_REVERSED` false, `RIGHT_REVERSED` false.
+- Encoder izquierdo: `LEFT_ENCODER_REVERSED` false, V 0.020 a 3.200, `LEFT_HOME_VOLTAGE` 0.128.
+- Encoder derecho: `RIGHT_ENCODER_REVERSED` false, V 0.030 a 3.205, `RIGHT_HOME_VOLTAGE` 0.565.
+- **Relación real: 2.742** (no 2:1). Comprobado: 90°, 180° y 360° reales = pantalla.
+- El Axon solo manda su posición con señal: los servos de la torreta siempre reciben "detenido"
+  (potencia 0) en lugar de quedar sin señal.
+- Con 25 % de potencia la cadena la frenaba; KS del TeleOp subió a 0.12 (afinar).
+- [ ] ¿Se mueve sola con potencia 0? (si sí, ajustar Neutral en el programador).
 
 **Pinpoint**
 

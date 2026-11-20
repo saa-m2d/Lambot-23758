@@ -44,6 +44,15 @@ import org.firstinspires.ftc.teamcode.config.TurretConfig;
  *     está mal. Se libera al cambiar una dirección (X, Y, A o B) o con Back.
  *   - Cambiar una dirección vuelve a bloquear el rango completo.
  *
+ * CALIBRACIÓN AUTOMÁTICA (recomendada): torreta en home al presionar INIT, PLAY, y L1 con el
+ * stick suelto.
+ *   1. El servo izquierdo empuja un poco y pregunta: ¿la torreta se fue hacia ATRÁS del robot?
+ *      (△ sí / ○ no / ✕ repetir). Es la única pregunta: de ahí salen los dos encoders.
+ *   2. El servo derecho empuja un poco y se compara solo.
+ *   3. Gira 200° y regresa para medir el voltaje mínimo y máximo de cada encoder.
+ *   Las líneas "Para TurretConfig" muestran todos los valores a copiar. Home = la posición al
+ *   presionar INIT. Luego revisa a mano con el stick y sigue con el paso 8.
+ *
  * PROCEDIMIENTO (anota los resultados en la hoja de CHECKLIST.md)
  *   1. Modo "solo izquierdo". Stick un poco a la izquierda: la torreta debe girar ANTIHORARIO
  *      (vista desde arriba). Si gira horario, presiona X.
@@ -52,7 +61,7 @@ import org.firstinspires.ftc.teamcode.config.TurretConfig;
  *   4. Modo "solo derecho". Stick a la izquierda: debe girar antihorario. Si no, presiona Y.
  *   5. Modo "ambos". Mueve despacio a los dos lados: debe girar suave, sin tirones ni ruido, y los
  *      dos encoders deben coincidir. Si todo está bien, presiona Start.
- *   6. Gira una vuelta completa del servo (180° de torreta) y anota V mín y V máx de cada encoder.
+ *   6. Gira una vuelta completa del servo (~128° de torreta) y anota V mín y V máx de cada encoder.
  *   7. Lleva la torreta a la marca de home, presiona Back y anota los dos HOME_VOLTAGE.
  *   8. Recorre el rango completo despacio y compara los límites con las marcas físicas.
  *   Copia los valores a TurretConfig.java.
@@ -60,13 +69,21 @@ import org.firstinspires.ftc.teamcode.config.TurretConfig;
 @TeleOp(name = "Test 5: Torreta", group = "Test")
 public class TurretTestOpMode extends LinearOpMode {
 
-    static final double MAX_TEST_POWER = 0.3;
+    static final double MAX_TEST_POWER = 0.6;
     static final double STICK_DEADBAND = 0.05;
     static final double SAFE_RANGE_DEG = 30;      // rango permitido antes de confirmar direcciones
     static final double MISMATCH_DEG = 8;         // movimiento al revés que cuenta como falla
     static final double STALL_SECONDS = 0.7;      // con potencia y sin moverse este tiempo -> aviso
     static final double STALL_DEG = 2;
     static final double DRIFT_DEG = 3;            // sin potencia y se movió esto -> aviso
+    static final double DETECT_POWER = 0.25;      // calibración automática: empujón de cada servo
+    static final double DETECT_SECONDS = 0.4;
+    static final double DETECT_MIN_DEG = 3;
+    static final double SWEEP_DEG = 200;          // más de 180° = una vuelta completa de servo
+    static final double SWEEP_POWER = 0.35;
+    static final double SWEEP_MAX_BOOST = 0.35;   // potencia extra si deja de avanzar (máximo 0.70)
+    static final double SWEEP_TIMEOUT_S = 12;
+    static final long ENCODER_WAKE_MS = 300;       // tiempo para que el Axon empiece a mandar su posición
 
     enum Drive {
         LEFT_ONLY("solo turretLeft (turretRight suelto)"),
@@ -98,7 +115,7 @@ public class TurretTestOpMode extends LinearOpMode {
             this.reversed = reversed;
             this.vMinConfig = vMinConfig;
             this.vMaxConfig = vMaxConfig;
-            // Ángulo inicial: se asume que la torreta está a menos de 90° de home
+            // Ángulo inicial: se asume que la torreta está cerca de home (menos de media vuelta de servo)
             double v = input.getVoltage();
             homeVoltage = homeVoltageConfig >= 0 ? homeVoltageConfig : v;
             lastRawDeg = rawDeg(v);
@@ -153,6 +170,7 @@ public class TurretTestOpMode extends LinearOpMode {
 
     Drive drive = Drive.LEFT_ONLY;   // se empieza con un solo servo: si algo está mal, no pelean
     boolean confirmed = false;
+    String calibrationResult = "";
     boolean fault = false;
 
     // Seguimiento de cada tramo con potencia en un mismo sentido
@@ -187,8 +205,14 @@ public class TurretTestOpMode extends LinearOpMode {
         PwmControl.PwmRange crRange = new PwmControl.PwmRange(TurretConfig.CR_PWM_MIN_US, TurretConfig.CR_PWM_MAX_US);
         left.setPwmRange(crRange);
         right.setPwmRange(crRange);
-        left.setPwmDisable();
-        right.setPwmDisable();
+        // El Axon solo manda su posición (4.º cable) mientras recibe pulso: sin señal da 0 V.
+        // Se le manda "detenido" (potencia 0) y se espera a que la lectura se estabilice antes de
+        // tomar home. La torreta no se mueve.
+        left.setPower(0);
+        right.setPower(0);
+        left.setPwmEnable();
+        right.setPwmEnable();
+        sleep(ENCODER_WAKE_MS);
 
         if (inputLeft != null) {
             encoderLeft = new TurretEncoder("izq", inputLeft, TurretConfig.LEFT_ENCODER_REVERSED,
@@ -200,16 +224,24 @@ public class TurretTestOpMode extends LinearOpMode {
         }
         primary = encoderLeft != null ? encoderLeft : encoderRight;
 
-        telemetry.addLine("Torreta suelta. Manos lejos al presionar PLAY.");
-        telemetry.addData("Ángulo y límites salen de", "encoder " + primary.label);
-        if (encoderLeft == null) telemetry.addLine("AVISO: falta turretEncLeft; se usa solo el derecho.");
-        if (encoderRight == null) telemetry.addLine("AVISO: falta turretEncRight; no habrá comparación.");
-        if (TurretConfig.LEFT_HOME_VOLTAGE < 0 || TurretConfig.RIGHT_HOME_VOLTAGE < 0) {
-            telemetry.addLine("Home sin medir: se usa la posición actual como home.");
+        // PASO A (antes de PLAY, servos sueltos): revisar los encoders girando la torreta a mano.
+        while (opModeInInit()) {
+            if (encoderLeft != null) encoderLeft.read();
+            if (encoderRight != null) encoderRight.read();
+            if (gamepad1.aWasPressed() && encoderLeft != null) encoderLeft.reversed = !encoderLeft.reversed;
+            if (gamepad1.bWasPressed() && encoderRight != null) encoderRight.reversed = !encoderRight.reversed;
+
+            telemetry.addLine("Pon la torreta en la marca de HOME (apuntando a la IZQUIERDA del robot).");
+            telemetry.addLine("Presiona PLAY y después L1: CALIBRACIÓN AUTOMÁTICA.");
+            telemetry.addLine("(Solo te hará una pregunta. Manos lejos de la torreta.)");
+            if (encoderLeft != null) telemetry.addData("Encoder izq", "%.1f°  %s", encoderLeft.turretDeg(), encoderLeft.reversed ? "(REVERSA)" : "");
+            if (encoderRight != null) telemetry.addData("Encoder der", "%.1f°  %s", encoderRight.turretDeg(), encoderRight.reversed ? "(REVERSA)" : "");
+            if (encoderLeft == null) telemetry.addLine("AVISO: falta turretEncLeft; se usa solo el derecho.");
+            if (encoderRight == null) telemetry.addLine("AVISO: falta turretEncRight; no habrá comparación.");
+            addConfigLine();
+            telemetry.update();
         }
-        telemetry.addData("Ángulo inicial", "%.1f°", primary.turretDeg());
-        telemetry.update();
-        waitForStart();
+        if (isStopRequested()) return;
 
         applyDriveMode();
         while (opModeIsActive()) {
@@ -271,7 +303,8 @@ public class TurretTestOpMode extends LinearOpMode {
             if (encoderRight != null) encoderRight.addTelemetry(telemetry);
             telemetry.addData("Servos", "izq %s | der %s",
                     leftReversed ? "REVERSA" : "normal", rightReversed ? "REVERSA" : "normal");
-            telemetry.addLine("Stick der: mover | D-pad: servo | X/Y: servos | A/B: encoders | Start: confirmar | Back: home");
+            addConfigLine();
+            telemetry.addLine("Stick der: mover | L1: detectar servos | D-pad: servo | □/△: servos | ✕/○: encoders | Options: confirmar | Share: home");
             telemetry.update();
         }
         setPower(0);
@@ -289,6 +322,7 @@ public class TurretTestOpMode extends LinearOpMode {
         boolean flipEncoderRight = gamepad1.bWasPressed();
         boolean confirm = gamepad1.startWasPressed();
         boolean rehome = gamepad1.backWasPressed();
+        boolean detect = gamepad1.leftBumperWasPressed();
         if (gamepad1.rightBumperWasPressed()) {
             if (encoderLeft != null) encoderLeft.resetVoltageRange();
             if (encoderRight != null) encoderRight.resetVoltageRange();
@@ -305,6 +339,7 @@ public class TurretTestOpMode extends LinearOpMode {
         if (flipRight) { rightReversed = !rightReversed; directionsChanged(); }
         if (flipEncoderLeft && encoderLeft != null) { encoderLeft.reversed = !encoderLeft.reversed; directionsChanged(); }
         if (flipEncoderRight && encoderRight != null) { encoderRight.reversed = !encoderRight.reversed; directionsChanged(); }
+        if (detect) autoCalibrate();
         if (confirm && !fault) confirmed = true;
         if (rehome) {
             if (encoderLeft != null) encoderLeft.rehome();
@@ -317,6 +352,191 @@ public class TurretTestOpMode extends LinearOpMode {
         }
     }
 
+    // ===================== Calibración automática (L1) =====================
+
+    /**
+     * Saca sola las 4 direcciones y el voltaje mínimo/máximo de cada encoder. Hace UNA sola
+     * pregunta: hacia dónde se movió la torreta en el primer empujón, porque es la única forma de
+     * saber el sentido real. Todo lo demás se compara contra eso.
+     *
+     * Debe empezar con la torreta en home (apuntando a la izquierda del robot). Antihorario visto
+     * desde arriba = desde la izquierda hacia ATRÁS del robot.
+     */
+    void autoCalibrate() {
+        if (left == null || right == null) {
+            calibrationResult = "faltan servos en la configuración";
+            return;
+        }
+        TurretEncoder other = primary == encoderLeft ? encoderRight : encoderLeft;
+        primary.reversed = false;                 // se mide en crudo
+        if (other != null) other.reversed = false;
+        leftReversed = false;
+        rightReversed = false;
+
+        // 1. Empujón con el servo izquierdo, potencia positiva sin invertir
+        double primaryStart = rawDeg(primary);
+        double otherStart = other != null ? rawDeg(other) : 0;
+        pulse(left, DETECT_POWER);
+        double primaryDelta = rawDeg(primary) - primaryStart;
+        double otherDelta = other != null ? rawDeg(other) - otherStart : 0;
+        if (Math.abs(primaryDelta) < DETECT_MIN_DEG) {
+            pulse(left, -DETECT_POWER);
+            calibrationResult = "FALLA: el servo izquierdo no movió la torreta (¿firmware CR? ¿cable del encoder?)";
+            directionsChanged();
+            return;
+        }
+
+        // 2. La única pregunta
+        Boolean towardRear = askTowardRear();
+        pulse(left, -DETECT_POWER);   // regresa a home
+        if (towardRear == null) return;
+
+        boolean leftPlusIsCcw = towardRear;
+        leftReversed = !leftPlusIsCcw;   // potencia positiva debe ser antihorario
+        double ccwPrimarySign = leftPlusIsCcw ? Math.signum(primaryDelta) : -Math.signum(primaryDelta);
+        primary.reversed = ccwPrimarySign < 0;   // antihorario debe hacer subir el ángulo
+        if (other != null && Math.abs(otherDelta) >= DETECT_MIN_DEG) {
+            double ccwOtherSign = leftPlusIsCcw ? Math.signum(otherDelta) : -Math.signum(otherDelta);
+            other.reversed = ccwOtherSign < 0;
+        }
+
+        // 3. Empujón con el servo derecho: se compara con el encoder principal (ya sin dudas)
+        double rightStart = rawDeg(primary);
+        pulse(right, DETECT_POWER);
+        double rightDelta = rawDeg(primary) - rightStart;
+        pulse(right, -DETECT_POWER);
+        boolean rightOk = Math.abs(rightDelta) >= DETECT_MIN_DEG;
+        if (rightOk) rightReversed = Math.signum(rightDelta) != ccwPrimarySign;
+
+        // 4. Barrido de más de una vuelta de servo (~128° de torreta) para medir voltajes, y regreso
+        directionsChanged();
+        drive = Drive.BOTH;
+        applyDriveMode();
+        if (encoderLeft != null) encoderLeft.resetVoltageRange();
+        if (encoderRight != null) encoderRight.resetVoltageRange();
+        boolean swept = moveTo(SWEEP_DEG) && moveTo(0);
+        setPower(0);
+
+        calibrationResult = (rightOk ? "" : "AVISO: el servo derecho no movió la torreta. ")
+                + (swept ? "LISTO: revisa que gire bien y manda foto de las líneas \"Para TurretConfig\"."
+                : "El barrido se detuvo (ver arriba). Las direcciones sí quedaron.");
+        telemetry.log().add("Calibración: %s", calibrationResult);
+    }
+
+    /** Grados de servo acumulados, sin inversión (después de leer los encoders). */
+    double rawDeg(TurretEncoder encoder) {
+        readEncoders();
+        return encoder.servoDegFromHome;
+    }
+
+    void readEncoders() {
+        if (encoderLeft != null) encoderLeft.read();
+        if (encoderRight != null) encoderRight.read();
+    }
+
+    /** Un servo solo, con potencia directa (sin inversión) un momento; el otro queda suelto. */
+    void pulse(CRServoImplEx servo, double power) {
+        CRServoImplEx other = servo == left ? right : left;
+        other.setPower(0);
+        other.setPwmEnable();   // con señal (detenido) para que su encoder siga leyendo
+        servo.setPwmEnable();
+        ElapsedTime timer = new ElapsedTime();
+        servo.setPower(power);
+        while (opModeIsActive() && timer.seconds() < DETECT_SECONDS) {
+            readEncoders();
+            idle();
+        }
+        servo.setPower(0);
+    }
+
+    /** true = se fue hacia atrás del robot, false = hacia el frente, null = se detuvo el OpMode. */
+    Boolean askTowardRear() {
+        while (opModeIsActive()) {
+            if (gamepad1.yWasPressed()) return true;
+            if (gamepad1.bWasPressed()) return false;
+            if (gamepad1.aWasPressed()) {          // repetir el movimiento para verlo otra vez
+                pulse(left, -DETECT_POWER);
+                pulse(left, DETECT_POWER);
+            }
+            readEncoders();
+            telemetry.addLine("CALIBRACIÓN: la torreta se acaba de mover un poco.");
+            telemetry.addLine("Home apunta a la IZQUIERDA del robot.");
+            telemetry.addLine("¿Se movió hacia la parte de ATRÁS del robot?");
+            telemetry.addLine("   △ = sí, hacia ATRÁS");
+            telemetry.addLine("   ○ = no, hacia el FRENTE");
+            telemetry.addLine("   ✕ = repetir el movimiento");
+            telemetry.update();
+        }
+        return null;
+    }
+
+    /** Lleva la torreta a un ángulo, despacio, cuidando límites y atorones. */
+    boolean moveTo(double targetDeg) {
+        ElapsedTime timeout = new ElapsedTime();
+        ElapsedTime stallTimer = new ElapsedTime();
+        double lastAngle = primary.turretDeg();
+        double boost = 0;
+        while (opModeIsActive()) {
+            readEncoders();
+            double angle = primary.turretDeg();
+            double error = targetDeg - angle;
+            if (Math.abs(error) < 3) {
+                setPower(0);
+                return true;
+            }
+            if (angle > SWEEP_DEG + 15 || angle < TurretConfig.MIN_DEG + TurretConfig.LIMIT_MARGIN_DEG) {
+                setPower(0);
+                telemetry.log().add("Barrido detenido: la torreta salió del rango esperado (%.0f°). ¿Respuesta al revés?", angle);
+                return false;
+            }
+            if (timeout.seconds() > SWEEP_TIMEOUT_S) {
+                setPower(0);
+                telemetry.log().add("Barrido detenido: tardó demasiado.");
+                return false;
+            }
+            // Si deja de avanzar, se le da más potencia poco a poco; solo se rinde a potencia máxima
+            if (Math.abs(angle - lastAngle) > 1) {
+                lastAngle = angle;
+                stallTimer.reset();
+            } else if (stallTimer.seconds() > 0.4 && boost < SWEEP_MAX_BOOST) {
+                boost = Math.min(SWEEP_MAX_BOOST, boost + 0.1);
+                stallTimer.reset();
+            } else if (stallTimer.seconds() > 1.0) {
+                setPower(0);
+                telemetry.log().add("Barrido detenido: no avanza ni con potencia %.2f (¿atorada o la cadena?).", SWEEP_POWER + boost);
+                return false;
+            }
+            double power = Math.min(SWEEP_POWER, 0.12 + Math.abs(error) * 0.01) + boost;
+            setPower(Math.copySign(power, error));
+            telemetry.addData("Calibración", "barrido: %.0f° → %.0f°  potencia %.2f  (no toques la torreta)",
+                    angle, targetDeg, power);
+            if (encoderLeft != null) encoderLeft.addTelemetry(telemetry);
+            if (encoderRight != null) encoderRight.addTelemetry(telemetry);
+            telemetry.update();
+        }
+        setPower(0);
+        return false;
+    }
+
+    /** Las líneas que se copian a TurretConfig. */
+    void addConfigLine() {
+        telemetry.addData("Para TurretConfig", "LEFT_REVERSED=%b  RIGHT_REVERSED=%b  LEFT_ENCODER_REVERSED=%s  RIGHT_ENCODER_REVERSED=%s",
+                leftReversed, rightReversed,
+                encoderLeft != null ? String.valueOf(encoderLeft.reversed) : "-",
+                encoderRight != null ? String.valueOf(encoderRight.reversed) : "-");
+        telemetry.addData("Para TurretConfig (voltajes)", "izq mín %s máx %s home %.3f  |  der mín %s máx %s home %s",
+                voltage(encoderLeft, true), voltage(encoderLeft, false),
+                encoderLeft != null ? encoderLeft.homeVoltage : 0,
+                voltage(encoderRight, true), voltage(encoderRight, false),
+                encoderRight != null ? String.format("%.3f", encoderRight.homeVoltage) : "-");
+        if (!calibrationResult.isEmpty()) telemetry.addData("Calibración", calibrationResult);
+    }
+
+    static String voltage(TurretEncoder encoder, boolean min) {
+        if (encoder == null || encoder.vMin > encoder.vMax) return "-";
+        return String.format("%.3f", min ? encoder.vMin : encoder.vMax);
+    }
+
     void directionsChanged() {
         fault = false;
         confirmed = false;
@@ -325,9 +545,12 @@ public class TurretTestOpMode extends LinearOpMode {
 
     /** El servo que no se usa queda sin señal, y con "Release" queda suelto. */
     void applyDriveMode() {
+        // Los dos siguen con señal (el que no empuja, en "detenido"): sin señal su encoder da 0 V
         setPower(0);
-        if (drive == Drive.RIGHT_ONLY) left.setPwmDisable(); else left.setPwmEnable();
-        if (drive == Drive.LEFT_ONLY) right.setPwmDisable(); else right.setPwmEnable();
+        left.setPower(0);
+        right.setPower(0);
+        left.setPwmEnable();
+        right.setPwmEnable();
     }
 
     /** Potencia positiva = antihorario, ya con la dirección de cada servo aplicada. */

@@ -15,7 +15,7 @@ public class TurretConstants {
     /** Potencia por grado/segundo de error (frena el sobretiro). */
     public static double KD = 0.0005;
     /** Potencia mínima para que la torreta se mueva (fricción). */
-    public static double KS = 0.05;
+    public static double KS = 0.12;   // en el robot, con 0.25 ya le cuesta avanzar con la cadena
     /** Potencia por grado/segundo que se necesita (feedforward de velocidad). */
     public static double KV = 1.0 / 300.0;
     /** Con menos error que esto no se aplica KS (evita vibrar en el objetivo). */
@@ -31,7 +31,7 @@ public class TurretConstants {
     /** Cerca de un límite (a menos de esto), la potencia hacia el límite se reduce. */
     public static double SLOW_ZONE_DEG = 15;
     /** Potencia máxima con el stick (control manual). */
-    public static double MANUAL_MAX_POWER = 0.5;
+    public static double MANUAL_MAX_POWER = 0.7;
 
     /** Cuánto se adelanta el objetivo para compensar el retraso de la torreta. */
     public static double LEAD_TIME_S = 0.04;

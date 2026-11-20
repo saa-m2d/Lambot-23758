@@ -12,39 +12,49 @@ package org.firstinspires.ftc.teamcode.config;
 public final class TurretConfig {
     private TurretConfig() {}
 
-    // ---------- Direcciones de los servos (MEDIR con Test 5) ----------
+    // ---------- Medido con la calibración automática del Test 5 (2026-11-19) ----------
     /** true si turretLeft gira la torreta en horario con potencia positiva. */
     public static final boolean LEFT_REVERSED = false;
     /** true si turretRight gira la torreta en horario con potencia positiva. */
     public static final boolean RIGHT_REVERSED = false;
 
-    // ---------- Encoder de turretLeft (MEDIR con Test 5) ----------
+    // ---------- Encoder de turretLeft ----------
     /** true si al girar la torreta en antihorario el ángulo de este encoder BAJA. */
     public static final boolean LEFT_ENCODER_REVERSED = false;
     /** Voltaje mínimo y máximo en una vuelta completa del servo. */
-    public static final double LEFT_ENCODER_V_MIN = 0.0;
-    public static final double LEFT_ENCODER_V_MAX = 3.3;
-    /** Voltaje con la torreta en home. Negativo = sin medir: se usa la posición al presionar INIT. */
-    public static final double LEFT_HOME_VOLTAGE = -1;
+    public static final double LEFT_ENCODER_V_MIN = 0.020;
+    public static final double LEFT_ENCODER_V_MAX = 3.200;
+    /**
+     * Voltaje con la torreta en home. Negativo = sin medir: se usa la posición al presionar INIT.
+     * Ojo: 0.128 V está cerca del salto 3.2 V → 0 V; el código lo maneja, pero si algún día se
+     * remonta la torreta conviene que home quede lejos de ese salto.
+     */
+    public static final double LEFT_HOME_VOLTAGE = 0.128;
 
-    // ---------- Encoder de turretRight (MEDIR con Test 5) ----------
+    // ---------- Encoder de turretRight ----------
     public static final boolean RIGHT_ENCODER_REVERSED = false;
-    public static final double RIGHT_ENCODER_V_MIN = 0.0;
-    public static final double RIGHT_ENCODER_V_MAX = 3.3;
-    public static final double RIGHT_HOME_VOLTAGE = -1;
+    public static final double RIGHT_ENCODER_V_MIN = 0.030;
+    public static final double RIGHT_ENCODER_V_MAX = 3.205;
+    public static final double RIGHT_HOME_VOLTAGE = 0.565;
 
     /*
-     * Al encender, cada encoder solo distingue una vuelta del servo = 180° de torreta. Por eso se
-     * asume que la torreta arranca a menos de 90° de home: dentro de eso, el ángulo sale exacto;
-     * fuera, sale 180° equivocado.
+     * Al encender, cada encoder solo distingue una vuelta del servo = 360° / GEAR_RATIO de torreta
+     * (unos 128°). Por eso la torreta debe arrancar a menos de ~64° de home: dentro de eso, el
+     * ángulo sale exacto; fuera, sale una vuelta de servo equivocado.
      */
 
     /** Si los dos encoders difieren más que esto (grados de torreta), algo anda mal. */
     public static final double ENCODER_MISMATCH_DEG = 5.0;
 
     // ---------- Mecánica ----------
-    /** Vueltas del servo por cada vuelta de la torreta. */
-    public static final double GEAR_RATIO = 2.0;
+    /**
+     * Vueltas del servo por cada vuelta de la torreta. Medido en el robot (2026-11-19):
+     *   - con 2.0, la pantalla marcaba 127° con 90° reales → ~2.82;
+     *   - con 2.82, en el recorrido completo la pantalla marcaba 10° menos que lo real (350° con
+     *     360° reales) → 2.82 × 350 / 360 = 2.742. Es la medición más precisa (recorrido más largo).
+     * Si se cuentan los dientes (dientes de la torreta ÷ dientes del servo), poner ese valor exacto.
+     */
+    public static final double GEAR_RATIO = 2.742;
 
     // ---------- Límites de giro (con la cadena portacables) ----------
     /** Límite horario: 40° desde home. */

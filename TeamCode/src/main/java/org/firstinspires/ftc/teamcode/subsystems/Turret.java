@@ -13,7 +13,7 @@ import org.firstinspires.ftc.teamcode.config.TurretConstants;
 import org.firstinspires.ftc.teamcode.util.MathUtil;
 
 /**
- * Torreta: 2 Axon MINI MK2 en modo continuo (CR) sobre el mismo eje, 2 vueltas de servo = 1 de
+ * Torreta: 2 Axon MINI MK2 en modo continuo (CR) sobre el mismo eje, GEAR_RATIO (~2.82) vueltas de servo = 1 de
  * torreta. El ángulo sale del encoder izquierdo (4.º cable); el derecho se compara con él.
  *
  * Ángulos en grados de torreta desde home (home = apuntando a la izquierda del robot).
@@ -26,8 +26,10 @@ public class Turret implements Subsystem {
     private final TurretEncoder encoderLeft, encoderRight, primary;
     private final boolean available;
 
+    /** Tiempo para que el Axon empiece a mandar su posición después de recibir señal. */
+    private static final long ENCODER_WAKE_MS = 300;
+
     private Mode mode = Mode.OFF;
-    private boolean pwmEnabled;
     private double manualPower;
     private double targetDeg, targetRateDegS;
 
@@ -54,6 +56,21 @@ public class Turret implements Subsystem {
         AnalogInput inputLeft = hardware.get(AnalogInput.class, RobotMap.TURRET_ENCODER_LEFT, "Analog Input, Control Hub analógico 0");
         AnalogInput inputRight = hardware.get(AnalogInput.class, RobotMap.TURRET_ENCODER_RIGHT, "Analog Input, Expansion Hub analógico 2");
 
+        // El Axon solo manda su posición (4.º cable) mientras recibe pulso: sin señal da 0 V.
+        // Los servos se quedan siempre con señal; "apagado" = potencia 0 (detenido).
+        PwmControl.PwmRange crRange = new PwmControl.PwmRange(TurretConfig.CR_PWM_MIN_US, TurretConfig.CR_PWM_MAX_US);
+        for (CRServoImplEx servo : new CRServoImplEx[]{left, right}) {
+            if (servo == null) continue;
+            servo.setPwmRange(crRange);
+            servo.setPower(0);
+            servo.setPwmEnable();
+        }
+        try {
+            Thread.sleep(ENCODER_WAKE_MS);   // a que la lectura del encoder se estabilice
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         encoderLeft = inputLeft == null ? null : new TurretEncoder(inputLeft, TurretConfig.LEFT_ENCODER_REVERSED,
                 TurretConfig.LEFT_ENCODER_V_MIN, TurretConfig.LEFT_ENCODER_V_MAX, TurretConfig.LEFT_HOME_VOLTAGE, hintDeg);
         encoderRight = inputRight == null ? null : new TurretEncoder(inputRight, TurretConfig.RIGHT_ENCODER_REVERSED,
@@ -63,12 +80,6 @@ public class Turret implements Subsystem {
         // Se puede mover con un solo servo, pero sin ningún encoder no hay control seguro
         available = (left != null || right != null) && primary != null;
 
-        PwmControl.PwmRange crRange = new PwmControl.PwmRange(TurretConfig.CR_PWM_MIN_US, TurretConfig.CR_PWM_MAX_US);
-        for (CRServoImplEx servo : new CRServoImplEx[]{left, right}) {
-            if (servo == null) continue;
-            servo.setPwmRange(crRange);
-            servo.setPwmDisable();
-        }
         if (primary != null) {
             angleDeg = primary.turretDeg();
             lastAngleDeg = angleDeg;
@@ -143,7 +154,7 @@ public class Turret implements Subsystem {
         manualPower = Range.clip(power, -1, 1) * TurretConstants.MANUAL_MAX_POWER;
     }
 
-    /** Deja la torreta suelta (sin señal). */
+    /** Torreta detenida (potencia 0, pero con señal para que los encoders sigan leyendo). */
     public void disable() {
         mode = Mode.OFF;
     }
@@ -175,14 +186,6 @@ public class Turret implements Subsystem {
         power = applyFaultChecks(power);
         appliedPower = power;
 
-        boolean wantEnabled = mode != Mode.OFF;
-        if (wantEnabled != pwmEnabled) {
-            for (CRServoImplEx servo : new CRServoImplEx[]{left, right}) {
-                if (servo == null) continue;
-                if (wantEnabled) servo.setPwmEnable(); else servo.setPwmDisable();
-            }
-            pwmEnabled = wantEnabled;
-        }
         if (left != null) left.setPower(TurretConfig.LEFT_REVERSED ? -power : power);
         if (right != null) right.setPower(TurretConfig.RIGHT_REVERSED ? -power : power);
     }
