@@ -12,54 +12,55 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.AimAndShoot;
 import org.firstinspires.ftc.teamcode.config.DriveConstants;
 import org.firstinspires.ftc.teamcode.config.MechanismConstants;
-import org.firstinspires.ftc.teamcode.config.VisionConstants;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.MathUtil;
 import org.firstinspires.ftc.teamcode.util.PoseStorage;
 
 /*
- * TeleOp de competencia de Furby. Control REV: ✕ = A, ○ = B, □ = X, △ = Y, Options = Start,
- * Share = Back, L1/R1 = bumpers, L2/R2 = gatillos.
+ * TeleOp de competencia de Furby, para UN SOLO PILOTO (gamepad1).
  *
- * ANTES DE PLAY (INIT)
- *   ○ = alianza ROJA, ✕ = alianza AZUL (cualquier control). Si viene del autónomo, ya está puesta.
- *   Sin autónomo: el robot debe estar quieto, con la torreta en la marca de home y el frente
- *   del robot apuntando hacia el lado contrario a los pilotos ("adelante" del field-centric).
+ * Lo automático: la torreta apunta sola a la CELL; el shooter se prepara solo en cuanto hay
+ * objetivo; el tope solo deja pasar la pelota con la torreta apuntando y las RPM listas.
+ * El piloto maneja, mete pelotas y aprieta R2.
  *
- * PILOTO (gamepad1)
- *   Stick izquierdo        mover (field-centric: adelante = lejos de los pilotos)
+ * ANTES DE PLAY (INIT): ○ = alianza ROJA, ✕ = alianza AZUL. Si viene del autónomo, ya está puesta.
+ *   Sin autónomo: robot quieto, torreta en home y el frente del robot mirando lejos del piloto.
+ *
+ * CONTROL (REV: ✕ = A, ○ = B, □ = X, △ = Y, Options = Start, Share = Back)
+ *   Stick izquierdo        mover (field-centric: adelante = lejos del piloto)
  *   Stick derecho X        girar
- *   L2                     modo lento
- *   R1                     intakes meter: encender / apagar
- *   L1 (mantener)          intakes en reversa
+ *   R2 (mantener)          DISPARAR
+ *   R1                     intake: encender / apagar
+ *   L1 (mantener)          intake en reversa
+ *   L2 (mantener)          modo lento
+ *
+ *   D-pad ← / → (mantener) torreta a mano (al soltar, vuelve a apuntar sola)
+ *   D-pad ↑ / ↓            más / menos RPM (si los tiros quedan cortos o largos)
+ *   △                      shooter: automático / apagado
+ *   □                      apuntado automático: encendido / apagado
+ *   ✕                      distancia para tirar SIN cámara: cerca → medio → lejos
+ *   ○                      flower arriba / abajo (solo en el último minuto)
  *   Options                "adelante" = hacia donde mira el robot ahora
- *   Share                  cambiar field-centric / robot-centric
- *   D-pad arriba           ubicar el robot con MegaTag 1 (solo si USE_MEGATAG; robot quieto)
+ *   Share                  field-centric / robot-centric
+ *   Touchpad               ver toda la información (otra vez: pantalla corta)
  *
- * OPERADOR (gamepad2)
- *   R2 (mantener)          disparar: el tope abre solo con RPM listas y torreta en el objetivo
- *   ✕                      shooter preparado: encender / apagar
- *   □                      apuntado automático: encender / apagar
- *   Stick derecho X        mover la torreta a mano (al soltar, regresa a automático)
- *   D-pad arriba / abajo   preset de distancia (cuando no hay objetivo calculado)
- *   D-pad izquierda        fijar la CELL lejana al público (otra vez = automático)
- *   D-pad derecha          fijar la CELL del lado del público (otra vez = automático)
- *   R1 / L1                más / menos RPM (ajuste en vivo)
- *   ○                      disparo en movimiento: encender / apagar
- *   △                      flower: arriba / abajo (último minuto, o desbloqueado)
- *   Options                desbloquear el flower antes del último minuto
- *   Share                  borrar falla de la torreta (después de revisarla)
- *
- * LUZ DEL CONTROL DEL OPERADOR
- *   verde = listo / disparando, amarillo = apuntando o subiendo RPM, rojo = sin objetivo o fuera
- *   de rango, azul = shooter apagado.
+ * LUZ DEL CONTROL: verde = listo para disparar, amarillo = apuntando o subiendo RPM,
+ *   rojo = sin objetivo o fuera de rango, azul = shooter apagado.
+ * VIBRA: 3 golpes al empezar el último minuto; uno largo si aparece una falla importante.
  */
 @TeleOp(name = "Furby TeleOp", group = "Competencia")
 public class CompetitionTeleOp extends LinearOpMode {
 
+    /** Log del Driver Hub (la telemetría combinada con Panels no tiene log()). */
+    org.firstinspires.ftc.robotcore.external.Telemetry.Log dsLog;
+
+    /** Potencia de la torreta con el D-pad (fracción de la potencia manual máxima). */
+    static final double DPAD_TURRET_POWER = 0.6;
+
     @Override
     public void runOpMode() {
+        dsLog = telemetry.log();
         telemetry = new JoinedTelemetry(telemetry, PanelsTelemetry.INSTANCE.getFtcTelemetry());
 
         boolean fromAuto = PoseStorage.isFresh();
@@ -85,8 +86,8 @@ public class CompetitionTeleOp extends LinearOpMode {
 
             telemetry.addData("Alianza", "%s   (○ roja, ✕ azul)", alliance.label);
             telemetry.addData("Inicio", fromAuto ? "posición y torreta del autónomo"
-                    : "sin autónomo: torreta en home y robot mirando lejos de los pilotos");
-            robot.addTelemetry(telemetry);
+                    : "sin autónomo: torreta en home y robot mirando lejos del piloto");
+            robot.addCompactTelemetry(telemetry);
             telemetry.update();
         }
         if (isStopRequested()) {
@@ -98,27 +99,34 @@ public class CompetitionTeleOp extends LinearOpMode {
         ElapsedTime matchTimer = new ElapsedTime();
         boolean fieldCentric = true;
         boolean intakeOn = false;
-        boolean spinUp = false;
-        boolean flowerUnlocked = !MechanismConstants.FLOWER_LOCK_UNTIL_ENDGAME;
+        boolean shooterAuto = true;
         boolean endgameWarned = false;
+        boolean fullTelemetry = false;
         AimAndShoot.Status lastLedStatus = null;
+        Gamepad pad = gamepad1;
 
         while (opModeIsActive()) {
             robot.readInputs();
 
-            // ===== Piloto =====
-            if (gamepad1.startWasPressed()) driverForward = robot.localization.pose().heading();
-            if (gamepad1.backWasPressed()) fieldCentric = !fieldCentric;
-            if (gamepad1.rightBumperWasPressed()) intakeOn = !intakeOn;
-            if (gamepad1.dpadUpWasPressed() && VisionConstants.USE_MEGATAG) {
-                boolean ok = robot.relocalizeWithMegaTag1();
-                telemetry.log().add(ok ? "Posición tomada de MegaTag 1" : "MegaTag 1 sin lectura: no se cambió la posición");
-            }
+            // ===== Botones =====
+            if (pad.startWasPressed()) driverForward = robot.localization.pose().heading();
+            if (pad.backWasPressed()) fieldCentric = !fieldCentric;
+            if (pad.rightBumperWasPressed()) intakeOn = !intakeOn;
+            if (pad.yWasPressed()) shooterAuto = !shooterAuto;
+            if (pad.xWasPressed()) robot.aim.setAutoAim(!robot.aim.autoAim());
+            if (pad.aWasPressed()) robot.aim.cyclePreset(1);
+            if (pad.dpadUpWasPressed()) robot.aim.adjustTrim(1);
+            if (pad.dpadDownWasPressed()) robot.aim.adjustTrim(-1);
+            if (pad.touchpadWasPressed()) fullTelemetry = !fullTelemetry;
+            boolean endgame = matchTimer.seconds() >= MechanismConstants.ENDGAME_START_S
+                    || !MechanismConstants.FLOWER_LOCK_UNTIL_ENDGAME;
+            if (pad.bWasPressed() && endgame) robot.flower.toggle();
 
-            double scale = gamepad1.left_trigger > 0.5 ? DriveConstants.SLOW_MODE_SCALE : 1.0;
-            double forward = MathUtil.shapeStick(-gamepad1.left_stick_y, DriveConstants.STICK_DEADBAND, DriveConstants.STICK_EXPONENT) * scale;
-            double left = MathUtil.shapeStick(-gamepad1.left_stick_x, DriveConstants.STICK_DEADBAND, DriveConstants.STICK_EXPONENT) * scale;
-            double turn = MathUtil.shapeStick(-gamepad1.right_stick_x, DriveConstants.STICK_DEADBAND, DriveConstants.STICK_EXPONENT)
+            // ===== Manejo =====
+            double scale = pad.left_trigger > 0.5 ? DriveConstants.SLOW_MODE_SCALE : 1.0;
+            double forward = MathUtil.shapeStick(-pad.left_stick_y, DriveConstants.STICK_DEADBAND, DriveConstants.STICK_EXPONENT) * scale;
+            double left = MathUtil.shapeStick(-pad.left_stick_x, DriveConstants.STICK_DEADBAND, DriveConstants.STICK_EXPONENT) * scale;
+            double turn = MathUtil.shapeStick(-pad.right_stick_x, DriveConstants.STICK_DEADBAND, DriveConstants.STICK_EXPONENT)
                     * DriveConstants.TURN_SCALE * scale;
             boolean canFieldCentric = fieldCentric && robot.localization.isAvailable();
             if (canFieldCentric) {
@@ -128,62 +136,52 @@ public class CompetitionTeleOp extends LinearOpMode {
                 robot.drivetrain.driveRobotCentric(forward, left, turn);
             }
 
-            if (gamepad1.left_bumper) {
+            // ===== Intake =====
+            if (pad.left_bumper) {
                 robot.intake.set(Intake.Mode.OUT);
             } else {
                 robot.intake.set(intakeOn ? Intake.Mode.IN : Intake.Mode.OFF);
             }
 
-            // ===== Operador =====
-            if (gamepad2.aWasPressed()) spinUp = !spinUp;
-            if (gamepad2.xWasPressed()) robot.aim.setAutoAim(!robot.aim.autoAim());
-            if (gamepad2.bWasPressed()) robot.aim.setShootOnMove(!robot.aim.shootOnMove());
-            if (gamepad2.dpadUpWasPressed()) robot.aim.cyclePreset(1);
-            if (gamepad2.dpadDownWasPressed()) robot.aim.cyclePreset(-1);
-            if (gamepad2.dpadLeftWasPressed()) toggleOverride(robot, Alliance.Cell.FAR);
-            if (gamepad2.dpadRightWasPressed()) toggleOverride(robot, Alliance.Cell.AUDIENCE);
-            if (gamepad2.rightBumperWasPressed()) robot.aim.adjustTrim(1);
-            if (gamepad2.leftBumperWasPressed()) robot.aim.adjustTrim(-1);
-            if (gamepad2.startWasPressed()) flowerUnlocked = !flowerUnlocked;
-            if (gamepad2.backWasPressed()) robot.turret.clearFaults();
-
-            boolean endgame = matchTimer.seconds() >= MechanismConstants.ENDGAME_START_S;
-            if (gamepad2.yWasPressed() && (endgame || flowerUnlocked)) robot.flower.toggle();
-
-            double manualTurret = MathUtil.shapeStick(-gamepad2.right_stick_x, DriveConstants.STICK_DEADBAND, 1.0);
-            boolean fire = gamepad2.right_trigger > 0.5;
-            robot.updateAim(manualTurret, spinUp, fire);
+            // ===== Torreta, shooter y tope =====
+            double manualTurret = pad.dpad_left ? DPAD_TURRET_POWER : pad.dpad_right ? -DPAD_TURRET_POWER : 0;
+            boolean fire = pad.right_trigger > 0.5;
+            // El shooter se prepara solo en cuanto hay un tiro calculado (así ya está listo al apretar R2)
+            boolean spinUp = shooterAuto && robot.solution().valid;
+            robot.updateAim(manualTurret, spinUp, fire && shooterAuto);
 
             robot.writeOutputs();
 
             // ===== Avisos =====
-            if (robot.diagnostics.consumeNewCritical()) {
-                gamepad1.rumble(400);
-                gamepad2.rumble(400);
-            }
-            if (endgame && !endgameWarned) {
+            if (robot.diagnostics.consumeNewCritical()) pad.rumble(500);
+            if (matchTimer.seconds() >= MechanismConstants.ENDGAME_START_S && !endgameWarned) {
                 endgameWarned = true;
-                gamepad1.rumbleBlips(3);
-                gamepad2.rumbleBlips(3);
+                pad.rumbleBlips(3);
             }
-            AimAndShoot.Status status = robot.aim.status();
+            AimAndShoot.Status status = shooterAuto ? robot.aim.status() : AimAndShoot.Status.IDLE;
             if (status != lastLedStatus) {
-                setLed(gamepad2, status);
+                setLed(pad, status);
                 lastLedStatus = status;
             }
 
-            telemetry.addData("Alianza", "%s  |  %s  |  %.0f s", alliance.label,
+            // ===== Pantalla =====
+            telemetry.addData("Partido", "%s  |  %s  |  %.0f s", alliance.label,
                     canFieldCentric ? "field-centric" : "robot-centric", matchTimer.seconds());
-            telemetry.addData("Flower", endgame ? "último minuto: habilitado"
-                    : flowerUnlocked ? "desbloqueado" : "bloqueado hasta el último minuto");
-            robot.addTelemetry(telemetry);
+            telemetry.addData("Modos", "shooter %s  |  apuntado %s  |  intake %s",
+                    shooterAuto ? "AUTO" : "APAGADO", robot.aim.autoAim() ? "AUTO" : "MANUAL", intakeOn ? "ON" : "off");
+            if (!robot.aim.isUsingSolution()) {
+                telemetry.addData("Sin cámara", "distancia %.0f in (✕ cambia)", robot.aim.presetDistance());
+            }
+            if (robot.aim.rpmTrim() != 0) telemetry.addData("Ajuste RPM", "%+.0f", robot.aim.rpmTrim());
+            telemetry.addData("Flower", endgame ? "habilitado (○)" : "bloqueado hasta el último minuto");
+            if (fullTelemetry) {
+                robot.addTelemetry(telemetry);
+            } else {
+                robot.addCompactTelemetry(telemetry);
+            }
             telemetry.update();
         }
         robot.stop();
-    }
-
-    private static void toggleOverride(Robot robot, Alliance.Cell cell) {
-        robot.tracker.setOverride(robot.tracker.override() == cell ? null : cell);
     }
 
     private static void setLed(Gamepad gamepad, AimAndShoot.Status status) {

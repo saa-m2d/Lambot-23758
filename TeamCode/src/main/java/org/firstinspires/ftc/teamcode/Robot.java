@@ -101,15 +101,25 @@ public class Robot {
         tracker.update(observation, localization, localization.omega(), turret.rateDegS());
         if (VisionConstants.USE_MEGATAG) applyMegaTag2();
 
-        solution = localization.isAvailable()
-                ? solver.solve(localization.pose(), localization.vx(), localization.vy(), localization.omega(),
-                tracker.target(), aim.shootOnMove(), aim.rpmTrim())
-                : ShotSolver.Solution.invalid();
+        if (localization.isAvailable()) {
+            // Con Pinpoint: la CELL vista se guarda en el campo en cada foto y se apunta a ella
+            // (permite disparar en movimiento y seguir apuntando si se pierden los tags)
+            solution = solver.solve(localization.pose(), localization.vx(), localization.vy(), localization.omega(),
+                    tracker.target(), aim.shootOnMove(), aim.rpmTrim());
+        } else {
+            // Sin Pinpoint: directo con lo que ve la cámara
+            Vision.CellObservation seen = observation;
+            if (seen != null && tracker.override() != null && seen.cell != tracker.override()) seen = null;
+            PoseHistory.Sample atCapture = seen != null ? localization.at(seen.captureNanos) : null;
+            double turretAtCapture = atCapture != null ? atCapture.turretDeg : turret.angleDeg();
+            solution = solver.solveFromObservation(seen, turretAtCapture, aim.rpmTrim());
+        }
     }
 
     /** Aplica las salidas de todos los subsistemas y revisa fallas. */
     public void writeOutputs() {
         if (drivetrain != null) drivetrain.periodic();
+        intake.updateCurrent();
         intake.periodic();
         shooter.periodic();
         turret.periodic();
@@ -186,6 +196,36 @@ public class Robot {
         turret.stop();
         flower.stop();
         vision.stop();
+    }
+
+    /** Pantalla corta para el piloto: solo fallas y el estado de cada cosa en una línea. */
+    public void addCompactTelemetry(Telemetry telemetry) {
+        int shown = 0;
+        for (ErrorDetectionSystem.Alert alert : diagnostics.alerts()) {
+            if (alert.severity == ErrorDetectionSystem.Severity.INFO || shown >= 3) continue;
+            telemetry.addLine((alert.severity == ErrorDetectionSystem.Severity.CRITICAL ? "!! " : "!  ") + alert.message);
+            shown++;
+        }
+        telemetry.addData("Torreta", turretStatus());
+        telemetry.addData("Tiro", aim.isUsingSolution()
+                ? String.format("%s  (%.0f in)", aim.status().label, solution.distanceIn)
+                : aim.status().label);
+        telemetry.addData("Shooter", !shooter.isEnabled() ? "apagado"
+                : String.format("%s  %.0f/%.0f  %.0f/%.0f", shooter.isReady() ? "LISTO" : "subiendo",
+                shooter.rpmLeft(), shooter.targetLeft(), shooter.rpmRight(), shooter.targetRight()));
+        telemetry.addData("Batería", "%.1f V", battery.voltage());
+    }
+
+    /** Qué está haciendo la torreta, en palabras. */
+    private String turretStatus() {
+        if (!turret.isAvailable()) return "FALTA HARDWARE";
+        String target = tracker.target() == null ? (observation != null ? "viendo la CELL" : "sin objetivo")
+                : tracker.isFresh() ? "siguiendo la CELL" : "apuntando con odometría (no ve la CELL)";
+        if (turret.mode() == Turret.Mode.MANUAL) target = "manual (stick)";
+        String warning = turret.isWrongDirection() ? "  (aviso: fue al revés)"
+                : turret.isStalled() ? "  (aviso: le cuesta avanzar)" : "";
+        return String.format("%s  %.0f°%s%s", target, turret.angleDeg(),
+                turret.isOnTarget() ? "  EN OBJETIVO" : "", warning);
     }
 
     public void addTelemetry(Telemetry telemetry) {

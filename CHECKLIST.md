@@ -178,9 +178,10 @@ Sentidos medidos el 2026-11-17 y ya copiados a `RobotMap.java` (`*_DIRECTION`).
 Calibrado el 2026-11-19 con la calibración automática del Test 5 (L1) y copiado a `TurretConfig.java`:
 
 - `LEFT_REVERSED` false, `RIGHT_REVERSED` false.
-- Encoder izquierdo: `LEFT_ENCODER_REVERSED` false, V 0.020 a 3.200, `LEFT_HOME_VOLTAGE` 0.128.
-- Encoder derecho: `RIGHT_ENCODER_REVERSED` false, V 0.030 a 3.205, `RIGHT_HOME_VOLTAGE` 0.565.
-- **Relación real: 2.742** (no 2:1). Comprobado: 90°, 180° y 360° reales = pantalla.
+- Encoder izquierdo: `LEFT_ENCODER_REVERSED` false, V 0.021 a 3.213, `LEFT_HOME_VOLTAGE` 0.128.
+- Encoder derecho: `RIGHT_ENCODER_REVERSED` false, V 0.017 a 3.211, `RIGHT_HOME_VOLTAGE` 0.565.
+- **Relación real: 2.681** (no 2:1), medida con el ajuste de vuelta completa del Test 5 (D-pad ↑).
+- [ ] Repetir la vuelta completa de home a home: debe marcar ~360° dos veces seguidas.
 - El Axon solo manda su posición con señal: los servos de la torreta siempre reciben "detenido"
   (potencia 0) en lugar de quedar sin señal.
 - Con 25 % de potencia la cadena la frenaba; KS del TeleOp subió a 0.12 (afinar).

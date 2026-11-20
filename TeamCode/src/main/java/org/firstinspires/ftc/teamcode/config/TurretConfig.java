@@ -22,8 +22,8 @@ public final class TurretConfig {
     /** true si al girar la torreta en antihorario el ángulo de este encoder BAJA. */
     public static final boolean LEFT_ENCODER_REVERSED = false;
     /** Voltaje mínimo y máximo en una vuelta completa del servo. */
-    public static final double LEFT_ENCODER_V_MIN = 0.020;
-    public static final double LEFT_ENCODER_V_MAX = 3.200;
+    public static final double LEFT_ENCODER_V_MIN = 0.021;
+    public static final double LEFT_ENCODER_V_MAX = 3.213;
     /**
      * Voltaje con la torreta en home. Negativo = sin medir: se usa la posición al presionar INIT.
      * Ojo: 0.128 V está cerca del salto 3.2 V → 0 V; el código lo maneja, pero si algún día se
@@ -33,8 +33,8 @@ public final class TurretConfig {
 
     // ---------- Encoder de turretRight ----------
     public static final boolean RIGHT_ENCODER_REVERSED = false;
-    public static final double RIGHT_ENCODER_V_MIN = 0.030;
-    public static final double RIGHT_ENCODER_V_MAX = 3.205;
+    public static final double RIGHT_ENCODER_V_MIN = 0.017;
+    public static final double RIGHT_ENCODER_V_MAX = 3.211;
     public static final double RIGHT_HOME_VOLTAGE = 0.565;
 
     /*
@@ -50,11 +50,12 @@ public final class TurretConfig {
     /**
      * Vueltas del servo por cada vuelta de la torreta. Medido en el robot (2026-11-19):
      *   - con 2.0, la pantalla marcaba 127° con 90° reales → ~2.82;
-     *   - con 2.82, en el recorrido completo la pantalla marcaba 10° menos que lo real (350° con
-     *     360° reales) → 2.82 × 350 / 360 = 2.742. Es la medición más precisa (recorrido más largo).
+     *   - con 2.82, en el recorrido completo la pantalla marcaba ~350° con 360° reales → 2.742;
+     *   - con 2.742, el ajuste de vuelta completa del Test 5 (D-pad ↑) marcó 352° en una vuelta
+     *     exacta de home a home → 2.742 × 352 / 360 = 2.681. Es la medición más precisa.
      * Si se cuentan los dientes (dientes de la torreta ÷ dientes del servo), poner ese valor exacto.
      */
-    public static final double GEAR_RATIO = 2.742;
+    public static double GEAR_RATIO = 2.681;   // no es final: el Test 5 la ajusta en vivo (D-pad ↑)
 
     // ---------- Límites de giro (con la cadena portacables) ----------
     /** Límite horario: 40° desde home. */

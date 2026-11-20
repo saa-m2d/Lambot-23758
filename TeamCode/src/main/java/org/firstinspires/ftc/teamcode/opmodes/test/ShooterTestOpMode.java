@@ -41,6 +41,9 @@ import org.firstinspires.ftc.teamcode.util.MathUtil;
 @TeleOp(name = "Test 6: Tiro", group = "Test")
 public class ShooterTestOpMode extends LinearOpMode {
 
+    /** Log del Driver Hub (la telemetría combinada con Panels no tiene log()). */
+    org.firstinspires.ftc.robotcore.external.Telemetry.Log dsLog;
+
     static final double RPM_STEP = 50;
     static final double SPLIT_STEP = 25;
     static final double DRIVE_SCALE = 0.35;
@@ -48,6 +51,7 @@ public class ShooterTestOpMode extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        dsLog = telemetry.log();   // la telemetría combinada con Panels no tiene log()
         telemetry = new JoinedTelemetry(telemetry, PanelsTelemetry.INSTANCE.getFtcTelemetry());
         Alliance alliance = Alliance.RED;
         Robot robot = new Robot(hardwareMap, alliance, null, true, 0);
@@ -92,7 +96,7 @@ public class ShooterTestOpMode extends LinearOpMode {
             rpmLeft = MathUtil.clamp(rpmLeft, 0, ShooterConstants.MAX_RPM);
             rpmRight = MathUtil.clamp(rpmRight, 0, ShooterConstants.MAX_RPM);
             if (gamepad1.xWasPressed()) {
-                telemetry.log().add("distancia %s in  ->  izq %.0f  der %.0f RPM",
+                dsLog.add("distancia %s in  ->  izq %.0f  der %.0f RPM",
                         solution.valid ? String.format("%.0f", solution.distanceIn) : "?", rpmLeft, rpmRight);
             }
 

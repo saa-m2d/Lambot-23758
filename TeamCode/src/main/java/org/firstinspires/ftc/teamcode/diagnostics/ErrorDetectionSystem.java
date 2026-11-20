@@ -112,10 +112,11 @@ public class ErrorDetectionSystem {
 
         // ---------- Torreta ----------
         if (robot.turret.isWrongDirection()) {
-            add(Severity.CRITICAL, "Torreta: se movió al revés de lo pedido. Potencia cortada. Revisa direcciones con Test 5; Share (operador) borra la falla.");
+            add(Severity.INFO, String.format("Torreta: se movió al revés de lo pedido (%d veces). Sigue funcionando;"
+                    + " si pasa seguido, revisa direcciones con Test 5.", robot.turret.wrongDirectionCount()));
         }
         if (robot.turret.isStalled()) {
-            add(Severity.WARNING, "Torreta atorada: revisa la cadena portacables o algo que la frene.");
+            add(Severity.INFO, "Torreta: le cuesta avanzar (¿cadena portacables?). Sigue funcionando.");
         }
         if (robot.turret.isEncoderMismatch()) {
             add(Severity.WARNING, String.format("Encoders de la torreta no coinciden (%.1f°): engrane que patina o cable flojo.",
@@ -145,7 +146,6 @@ public class ErrorDetectionSystem {
             slowCheckTimer.reset();
             if (robot.drivetrain != null) driveAmps = robot.drivetrain.readCurrents();
             shooterAmps = robot.shooter.readCurrents();
-            robot.intake.checkCurrent();
         }
         String[] driveNames = {"frontLeft", "backLeft", "frontRight", "backRight"};
         for (int i = 0; i < driveAmps.length && i < driveOvercurrent.length; i++) {
@@ -158,9 +158,6 @@ public class ErrorDetectionSystem {
             if (shooterOvercurrent[i].update(shooterAmps[i] > MOTOR_OVERCURRENT_A, 1)) {
                 add(Severity.WARNING, String.format("%s con %.1f A sostenidos: revisa que gire libre.", shooterNames[i], shooterAmps[i]));
             }
-        }
-        if (robot.intake.isJammed()) {
-            add(Severity.WARNING, "Intake atorado (corriente alta). Saca pelotas en reversa.");
         }
 
         // ---------- ¿Hay fallas críticas nuevas? ----------

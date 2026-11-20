@@ -29,6 +29,7 @@ public class Shooter implements Subsystem {
     private final ElapsedTime readyTimer = new ElapsedTime();
     private final ElapsedTime loopTimer = new ElapsedTime();
     private double integralLeft, integralRight;
+    private double rawPower = Double.NaN;
 
     public Shooter(HardwareCheck hardware, BatteryMonitor battery) {
         this.battery = battery;
@@ -74,10 +75,19 @@ public class Shooter implements Subsystem {
         setTargets(0, 0);
     }
 
+    /** Solo para pruebas: potencia fija a los dos motores, sin control. NaN = control normal. */
+    public void setRawPower(double power) {
+        rawPower = power;
+    }
+
     @Override
     public void periodic() {
         if (!isAvailable()) return;
-        if (!enabled) {
+        if (!Double.isNaN(rawPower)) {
+            powerLeft = rawPower;
+            powerRight = rawPower;
+            ready = false;
+        } else if (!enabled) {
             powerLeft = 0;
             powerRight = 0;
             integralLeft = 0;
@@ -90,8 +100,10 @@ public class Shooter implements Subsystem {
             loopTimer.reset();
             integralLeft = updateIntegral(integralLeft, targetLeft, rpmLeft, dt);
             integralRight = updateIntegral(integralRight, targetRight, rpmRight, dt);
-            powerLeft = control(targetLeft, rpmLeft, compensation, integralLeft);
-            powerRight = control(targetRight, rpmRight, compensation, integralRight);
+            powerLeft = control(targetLeft, rpmLeft, compensation, integralLeft,
+                    ShooterConstants.KS_LEFT, ShooterConstants.KV_LEFT);
+            powerRight = control(targetRight, rpmRight, compensation, integralRight,
+                    ShooterConstants.KS_RIGHT, ShooterConstants.KV_RIGHT);
 
             boolean within = Math.abs(targetLeft - rpmLeft) < ShooterConstants.READY_TOLERANCE_RPM
                     && Math.abs(targetRight - rpmRight) < ShooterConstants.READY_TOLERANCE_RPM;
@@ -115,9 +127,10 @@ public class Shooter implements Subsystem {
         return Range.clip(integral + ShooterConstants.KI * error * dt, -max, max);
     }
 
-    private static double control(double target, double measured, double voltageCompensation, double integral) {
+    private static double control(double target, double measured, double voltageCompensation, double integral,
+                                  double ks, double kv) {
         if (target <= 0) return 0;
-        double feedforward = (ShooterConstants.KS + ShooterConstants.KV * target) * voltageCompensation;
+        double feedforward = (ks + kv * target) * voltageCompensation;
         double feedback = ShooterConstants.KP * (target - measured) + integral;
         return Range.clip(feedforward + feedback, 0, 1);   // sin frenar en reversa
     }

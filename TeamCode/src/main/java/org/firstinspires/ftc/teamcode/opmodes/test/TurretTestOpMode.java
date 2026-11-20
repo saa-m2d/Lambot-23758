@@ -323,6 +323,7 @@ public class TurretTestOpMode extends LinearOpMode {
         boolean confirm = gamepad1.startWasPressed();
         boolean rehome = gamepad1.backWasPressed();
         boolean detect = gamepad1.leftBumperWasPressed();
+        boolean fullTurn = gamepad1.dpadUpWasPressed();
         if (gamepad1.rightBumperWasPressed()) {
             if (encoderLeft != null) encoderLeft.resetVoltageRange();
             if (encoderRight != null) encoderRight.resetVoltageRange();
@@ -340,6 +341,7 @@ public class TurretTestOpMode extends LinearOpMode {
         if (flipEncoderLeft && encoderLeft != null) { encoderLeft.reversed = !encoderLeft.reversed; directionsChanged(); }
         if (flipEncoderRight && encoderRight != null) { encoderRight.reversed = !encoderRight.reversed; directionsChanged(); }
         if (detect) autoCalibrate();
+        if (fullTurn) adjustGearRatioFromFullTurn();
         if (confirm && !fault) confirmed = true;
         if (rehome) {
             if (encoderLeft != null) encoderLeft.rehome();
@@ -518,6 +520,22 @@ public class TurretTestOpMode extends LinearOpMode {
         return false;
     }
 
+    /**
+     * Con la torreta exactamente una vuelta completa desde home (otra vez en la marca de home),
+     * corrige GEAR_RATIO para que la pantalla diga 360°. Se aplica al momento.
+     */
+    void adjustGearRatioFromFullTurn() {
+        double shown = Math.abs(primary.turretDeg());
+        if (shown < 300 || shown > 420) {
+            telemetry.log().add("Vuelta completa: lleva la torreta de home a home (una vuelta) antes de presionar ↑. Ahora marca %.1f°.", shown);
+            return;
+        }
+        double before = TurretConfig.GEAR_RATIO;
+        TurretConfig.GEAR_RATIO = before * shown / 360.0;
+        telemetry.log().add("Vuelta completa: marcaba %.1f° → GEAR_RATIO %.3f → %.3f (ya aplicado)",
+                shown, before, TurretConfig.GEAR_RATIO);
+    }
+
     /** Las líneas que se copian a TurretConfig. */
     void addConfigLine() {
         telemetry.addData("Para TurretConfig", "LEFT_REVERSED=%b  RIGHT_REVERSED=%b  LEFT_ENCODER_REVERSED=%s  RIGHT_ENCODER_REVERSED=%s",
@@ -529,6 +547,8 @@ public class TurretTestOpMode extends LinearOpMode {
                 encoderLeft != null ? encoderLeft.homeVoltage : 0,
                 voltage(encoderRight, true), voltage(encoderRight, false),
                 encoderRight != null ? String.format("%.3f", encoderRight.homeVoltage) : "-");
+        telemetry.addData("Relación de engranes", "GEAR_RATIO = %.3f   (D-pad ↑ con una vuelta completa: ajustar)",
+                TurretConfig.GEAR_RATIO);
         if (!calibrationResult.isEmpty()) telemetry.addData("Calibración", calibrationResult);
     }
 

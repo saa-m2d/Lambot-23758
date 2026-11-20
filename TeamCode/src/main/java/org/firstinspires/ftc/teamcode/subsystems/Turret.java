@@ -42,11 +42,11 @@ public class Turret implements Subsystem {
     private boolean wrongDirection;
     private boolean stalled;
     private boolean mismatch;
-    private int segmentSign;
-    private double segmentStartDeg;
+    private final ElapsedTime wrongTimer = new ElapsedTime();
+    private final ElapsedTime wrongCooldown = new ElapsedTime();
+    private int wrongDirectionCount;
     private double stallReferenceDeg;
     private final ElapsedTime stallTimer = new ElapsedTime();
-    private final ElapsedTime cooldownTimer = new ElapsedTime();
     private final ElapsedTime mismatchTimer = new ElapsedTime();
 
     /** @param hintDeg ángulo esperado al iniciar: 0 si la torreta está en home. */
@@ -125,16 +125,21 @@ public class Turret implements Subsystem {
     }
 
     /**
-     * De todos los ángulos equivalentes (cada 360°) al pedido, el que cabe en el rango y queda más
-     * cerca de donde está la torreta.
+     * De todos los ángulos equivalentes (cada 360°) al pedido, el que cabe en el rango.
+     *
+     * Se elige el más cercano al OBJETIVO ANTERIOR (no a la posición actual): así, cuando el tag
+     * cruza un límite y la torreta tiene que darse la vuelta por el otro lado, termina la vuelta
+     * en lugar de cambiar de idea a medio camino (eso la hacía temblar). Si no había objetivo
+     * anterior, se usa la posición actual.
      */
     public double chooseAngle(double desiredDeg) {
+        double reference = mode == Mode.POSITION ? targetDeg : angleDeg;
         double wrapped = MathUtil.wrap180(desiredDeg);
         double best = Double.NaN;
         for (int turns = -2; turns <= 2; turns++) {
             double candidate = wrapped + 360.0 * turns;
             if (candidate < lowLimit() || candidate > highLimit()) continue;
-            if (Double.isNaN(best) || Math.abs(candidate - angleDeg) < Math.abs(best - angleDeg)) {
+            if (Double.isNaN(best) || Math.abs(candidate - reference) < Math.abs(best - reference)) {
                 best = candidate;
             }
         }
@@ -159,11 +164,16 @@ public class Turret implements Subsystem {
         mode = Mode.OFF;
     }
 
-    /** Borra la falla de dirección (después de revisar el robot). */
+    /** Borra las fallas al momento (sin esperar el reintento automático). */
     public void clearFaults() {
         wrongDirection = false;
         stalled = false;
-        segmentSign = 0;
+        wrongTimer.reset();
+    }
+
+    /** Cuántas veces ha saltado la falla de dirección (si sube seguido, algo está mal de verdad). */
+    public int wrongDirectionCount() {
+        return wrongDirectionCount;
     }
 
     @Override
@@ -215,37 +225,38 @@ public class Turret implements Subsystem {
         return power;
     }
 
+    /**
+     * Revisa fallas, pero NUNCA corta la potencia: en un match es peor una torreta bloqueada que
+     * un aviso. Lo único que limita la potencia es applyLimits (no pasar de los topes de la cadena).
+     * Las fallas se muestran en pantalla para revisarlas después.
+     */
     private double applyFaultChecks(double power) {
-        if (wrongDirection) return 0;
-
-        // Dirección: con potencia en un sentido, el ángulo no debe ir claramente al otro
-        int sign = Math.abs(power) < 0.05 ? 0 : (int) Math.signum(power);
-        if (sign != segmentSign) {
-            segmentSign = sign;
-            segmentStartDeg = angleDeg;
-        }
-        if (sign != 0 && sign * (angleDeg - segmentStartDeg) < -TurretConstants.WRONG_DIRECTION_DEG) {
+        // Dirección: con potencia firme en un sentido, la torreta se mueve claramente al otro
+        // durante un rato (un frenado por inercia dura menos y no cuenta)
+        boolean opposite = Math.abs(power) >= TurretConstants.WRONG_DIRECTION_POWER
+                && Math.signum(power) * rateDegS < -TurretConstants.WRONG_DIRECTION_RATE_DEG_S;
+        if (!opposite) {
+            wrongTimer.reset();
+            if (wrongCooldown.seconds() > TurretConstants.WRONG_DIRECTION_RETRY_S) wrongDirection = false;
+        } else if (!wrongDirection && wrongTimer.seconds() > TurretConstants.WRONG_DIRECTION_TIME_S) {
             wrongDirection = true;
-            return 0;
+            wrongDirectionCount++;
+            wrongCooldown.reset();
         }
 
-        // Atorada: mucha potencia y no se mueve
-        if (stalled) {
-            if (cooldownTimer.seconds() < TurretConstants.STALL_COOLDOWN_S) return 0;
-            stalled = false;
-        }
+        // Atorada: mucha potencia y no se mueve (solo aviso)
         if (Math.abs(power) >= TurretConstants.STALL_POWER) {
             if (Math.abs(angleDeg - stallReferenceDeg) > TurretConstants.STALL_DEG) {
                 stallReferenceDeg = angleDeg;
                 stallTimer.reset();
+                stalled = false;
             } else if (stallTimer.seconds() > TurretConstants.STALL_TIME_S) {
                 stalled = true;
-                cooldownTimer.reset();
-                return 0;
             }
         } else {
             stallReferenceDeg = angleDeg;
             stallTimer.reset();
+            stalled = false;
         }
         return power;
     }
@@ -258,7 +269,7 @@ public class Turret implements Subsystem {
 
     /** En el objetivo: cerca del ángulo pedido y casi a la misma velocidad. */
     public boolean isOnTarget() {
-        return available && mode == Mode.POSITION && !hasFault()
+        return available && mode == Mode.POSITION
                 && Math.abs(targetDeg - angleDeg) < TurretConstants.ON_TARGET_DEG
                 && Math.abs(rateDegS - targetRateDegS) < TurretConstants.ON_TARGET_RATE_DEG_S;
     }

@@ -38,7 +38,7 @@ public class VisionConstants {
 
     // ---------- Seguimiento del objetivo ----------
     /** Cada vista nueva de la CELL se mezcla con lo guardado: 1 = solo la nueva, 0 = ignorarla. */
-    public static double TARGET_BLEND = 0.35;
+    public static double TARGET_BLEND = 0.7;   // alto = la cámara manda; el Pinpoint solo rellena
     /** Si una vista nueva difiere más que esto de lo guardado, se toma la nueva completa. */
     public static double TARGET_RESET_IN = 18;
     /** No se toman vistas si el chasis gira más rápido que esto (la imagen sale movida). */

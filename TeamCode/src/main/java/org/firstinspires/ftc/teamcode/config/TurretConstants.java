@@ -36,15 +36,20 @@ public class TurretConstants {
     /** Cuánto se adelanta el objetivo para compensar el retraso de la torreta. */
     public static double LEAD_TIME_S = 0.04;
 
-    // ---------- Detección de fallas ----------
-    /** Con al menos esta potencia y sin moverse STALL_DEG en STALL_TIME_S: atorada. */
+    // ---------- Detección de fallas (solo avisan; nunca cortan la potencia) ----------
+    /** Con al menos esta potencia y sin moverse STALL_DEG en STALL_TIME_S: aviso de atorada. */
     public static double STALL_POWER = 0.35;
     public static double STALL_TIME_S = 0.5;
     public static double STALL_DEG = 1.5;
-    /** Tras atorarse, la potencia se corta este tiempo. */
-    public static double STALL_COOLDOWN_S = 1.0;
-    /** Si se mueve más que esto al revés de la potencia: dirección mal configurada (se bloquea). */
-    public static double WRONG_DIRECTION_DEG = 8;
+    /**
+     * Aviso de dirección: con al menos esta potencia, la torreta va al revés a más de esta
+     * velocidad durante este tiempo seguido (un frenado por inercia dura menos y no cuenta). El
+     * aviso se borra solo después de WRONG_DIRECTION_RETRY_S sin repetirse.
+     */
+    public static double WRONG_DIRECTION_POWER = 0.3;
+    public static double WRONG_DIRECTION_RATE_DEG_S = 40;
+    public static double WRONG_DIRECTION_TIME_S = 0.4;
+    public static double WRONG_DIRECTION_RETRY_S = 2.0;
     /** Los dos encoders deben diferir más que ENCODER_MISMATCH_DEG este tiempo para marcar falla. */
     public static double MISMATCH_PERSIST_S = 0.3;
 }

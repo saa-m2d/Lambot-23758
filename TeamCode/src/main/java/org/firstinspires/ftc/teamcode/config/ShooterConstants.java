@@ -14,10 +14,17 @@ import com.bylazar.configurables.annotations.Configurable;
 public class ShooterConstants {
 
     // ---------- Control de velocidad (por motor) ----------
-    /** Potencia por RPM a 12 V (feedforward). 1/6000 = el motor libre a potencia 1. */
-    public static double KV = 1.0 / 5900.0;
+    /*
+     * Feedforward por motor, medido con "Test 7" → Options (2026-11-19, batería 12.3 V):
+     *   izquierdo: 1410 RPM a 0.35, 3314 RPM a 0.70 → máximo ~4950 RPM
+     *   derecho:    870 RPM a 0.35, 2390 RPM a 0.70 → máximo ~3700 RPM (tiene más fricción)
+     */
+    /** Potencia por RPM a 12 V. */
+    public static double KV_LEFT = 0.000189;
+    public static double KV_RIGHT = 0.000237;
     /** Potencia mínima para vencer la fricción. */
-    public static double KS = 0.03;
+    public static double KS_LEFT = 0.093;
+    public static double KS_RIGHT = 0.154;
     /** Corrección proporcional por cada RPM de error. */
     public static double KP = 0.0006;
     /** Corrección integral: potencia por (RPM de error × segundo). Quita el error que deja KP solo. */

@@ -6,6 +6,7 @@ import com.pedropathing.math.Vector2D;
 import org.firstinspires.ftc.teamcode.config.ShooterConstants;
 import org.firstinspires.ftc.teamcode.config.TurretConstants;
 import org.firstinspires.ftc.teamcode.config.VisionConstants;
+import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.util.MathUtil;
 
 /**
@@ -61,6 +62,31 @@ public class ShotSolver {
         return MathUtil.isValidTable(ShooterConstants.TABLE_DISTANCE_IN, ShooterConstants.TABLE_RPM_LEFT)
                 && MathUtil.isValidTable(ShooterConstants.TABLE_DISTANCE_IN, ShooterConstants.TABLE_RPM_RIGHT)
                 && MathUtil.isValidTable(ShooterConstants.TOF_DISTANCE_IN, ShooterConstants.TOF_SECONDS);
+    }
+
+    /**
+     * Tiro solo con lo que ve la cámara en esta foto (sin Pinpoint). Sin disparo en movimiento.
+     *
+     * @param observation        la CELL vista, con distancia
+     * @param turretAtCaptureDeg ángulo de la torreta cuando se tomó la foto
+     */
+    public Solution solveFromObservation(Vision.CellObservation observation, double turretAtCaptureDeg, double rpmTrim) {
+        if (observation == null || !observation.hasRange || !tablesValid()) return Solution.invalid();
+        double forward = observation.forwardIn, left = observation.leftIn;
+        double distance = Math.hypot(forward, left);
+        if (distance < 1) return Solution.invalid();
+
+        // Ajuste lateral del punto de apuntado (a la izquierda vista desde el robot)
+        double lateral = VisionConstants.AIM_LATERAL_OFFSET_IN;
+        double aimForward = forward - left / distance * lateral;
+        double aimLeft = left + forward / distance * lateral;
+
+        double turretDeg = MathUtil.wrap180(turretAtCaptureDeg + Math.toDegrees(Math.atan2(aimLeft, aimForward)));
+        double rangeIn = Math.hypot(aimForward, aimLeft) + VisionConstants.AIM_DISTANCE_OFFSET_IN;
+        double[] rpm = rpmFor(rangeIn);
+        double[] table = ShooterConstants.TABLE_DISTANCE_IN;
+        boolean inRange = rangeIn >= table[0] - RANGE_MARGIN_IN && rangeIn <= table[table.length - 1] + RANGE_MARGIN_IN;
+        return new Solution(true, turretDeg, 0, rangeIn, rpm[0] + rpmTrim, rpm[1] + rpmTrim, 0, inRange);
     }
 
     /**
